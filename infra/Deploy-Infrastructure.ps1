@@ -4,9 +4,6 @@
 .DESCRIPTION
     This script initiates the deployment of the main.bicep template to the current default Azure subscription,
     determined by the Azure CLI. The deployment name and location are required parameters.
-
-	Follow the instructions in the DeploymentGuide.md file at the root of this project to understand what this
-    script will deploy to your Azure subscription, and the step-by-step on how to run it.
 .PARAMETER DeploymentName
     The name of the deployment to create in an Azure subscription.
 .PARAMETER Location
@@ -15,7 +12,7 @@
     .\Deploy-Infrastructure.ps1 -DeploymentName "my-workflows" -Location "westeurope"
 .NOTES
     Author: James Croft
-    Last Updated: 2024-02-23
+    Last Updated: 2024-04-20
 #>
 
 param
@@ -26,9 +23,9 @@ param
     [string]$Location
 )
 
-Write-Host "Deploying infrastructure..."
+Write-Host "Starting infrastructure deployment..."
 
-Set-Location -Path $PSScriptRoot
+Push-Location -Path $PSScriptRoot
 
 az --version
 
@@ -38,5 +35,7 @@ $DeploymentOutputs = (az deployment sub create --name $DeploymentName --location
         --parameters location=$Location `
         --query properties.outputs -o json) | ConvertFrom-Json
 $DeploymentOutputs | ConvertTo-Json | Out-File -FilePath './InfrastructureOutputs.json' -Encoding utf8
+
+Pop-Location
 
 return $DeploymentOutputs

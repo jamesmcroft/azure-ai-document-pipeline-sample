@@ -14,7 +14,7 @@ public class WorkflowResult(string workflowName, ILogger? workflowLogger = defau
     /// <summary>
     /// Gets the results of the workflow.
     /// </summary>
-    public List<string> Results { get; } = new();
+    public List<string> Messages { get; } = new();
 
     /// <summary>
     /// Adds a result to the workflow.
@@ -24,7 +24,7 @@ public class WorkflowResult(string workflowName, ILogger? workflowLogger = defau
     /// <param name="logLevel">The log level to use when logging the result.</param>
     public void Add(string action, string message, LogLevel logLevel = LogLevel.Information)
     {
-        Results.Add($"{workflowName}::{action} - {message}");
+        Messages.Add($"{workflowName}::{action} - {message}");
         workflowLogger?.Log(logLevel, ResultMessageFormat, workflowName, action, message);
     }
 
@@ -41,7 +41,7 @@ public class WorkflowResult(string workflowName, ILogger? workflowLogger = defau
         IEnumerable<string> results,
         LogLevel logLevel = LogLevel.Information)
     {
-        Results.AddRange(results);
+        Messages.AddRange(results);
         workflowLogger?.Log(logLevel, ResultMessageFormat, workflowName, action, message);
     }
 }

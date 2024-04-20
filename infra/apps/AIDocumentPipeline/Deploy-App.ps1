@@ -14,7 +14,7 @@
     .\Deploy-App.ps1 -InfrastructureOutputsPath "../../InfrastructureOutputs.json"
 .NOTES
     Author: James Croft
-    Last Updated: 2024-02-23
+    Last Updated: 2024-04-20
 #>
 
 param
@@ -23,10 +23,6 @@ param
     [string]$InfrastructureOutputsPath
 )
 
-Set-Location -Path $PSScriptRoot
-
-Write-Host "Deploying ai-document-pipeline..."
-
 $InfrastructureOutputs = Get-Content -Path $InfrastructureOutputsPath -Raw | ConvertFrom-Json
 
 $Location = $InfrastructureOutputs.resourceGroupInfo.value.location
@@ -34,12 +30,15 @@ $ResourceGroupName = $InfrastructureOutputs.resourceGroupInfo.value.name
 $WorkloadName = $InfrastructureOutputs.resourceGroupInfo.value.workloadName
 $ContainerRegistryName = $InfrastructureOutputs.containerRegistryInfo.value.name
 $CompletionModelDeploymentName = $InfrastructureOutputs.openAIInfo.value.completionModelDeploymentName
-$EmbeddingModelDeploymentName = $InfrastructureOutputs.openAIInfo.value.embeddingModelDeploymentName
 
 $ContainerName = "ai-document-pipeline"
 $ContainerVersion = (Get-Date -Format "yyMMddHHmm")
 $ContainerImageName = "${ContainerName}:${ContainerVersion}"
 $AzureContainerImageName = "${ContainerRegistryName}.azurecr.io/${ContainerImageName}"
+
+Push-Location -Path $PSScriptRoot
+
+Write-Host "Starting ${ContainerName} deployment..."
 
 az --version
 
@@ -49,12 +48,12 @@ az acr login --name $ContainerRegistryName
 
 docker build -t $ContainerImageName -f ../../../src/AIDocumentPipeline/Dockerfile ../../../src/.
 
-Write-Host "Pushing ${ContainerImageName} image..."
+Write-Host "Pushing ${ContainerImageName} image to Azure..."
 
 docker tag $ContainerImageName $AzureContainerImageName
 docker push $AzureContainerImageName
 
-Write-Host "Deploying container app..."
+Write-Host "Deploying Azure Container Apps for ${ContainerName}..."
 
 $DeploymentOutputs = (az deployment group create --name ai-document-pipeline-app --resource-group $ResourceGroupName --template-file './app.bicep' `
         --parameters '../../main.parameters.json' `
@@ -62,12 +61,14 @@ $DeploymentOutputs = (az deployment group create --name ai-document-pipeline-app
         --parameters location=$Location `
         --parameters containerImageName=$ContainerImageName `
         --parameters openAICompletionModelName=$CompletionModelDeploymentName `
-        --parameters openAIEmbeddingModelName=$EmbeddingModelDeploymentName `
         --query properties.outputs -o json) | ConvertFrom-Json
+
 $DeploymentOutputs | ConvertTo-Json | Out-File -FilePath './AppOutputs.json' -Encoding utf8
 
-Write-Host "Clean up old images..."
+Write-Host "Clean up old ${ContainerName} images in Azure Container Registry..."
 
 az acr run --cmd "acr purge --filter '${ContainerName}:.*' --untagged --ago 1h" --registry $ContainerRegistryName /dev/null
+
+Pop-Location
 
 return $DeploymentOutputs

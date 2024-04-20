@@ -67,19 +67,6 @@ module keyVault './security/key-vault.bicep' = {
   }
 }
 
-module eventHubNamespace './analytics/event-hub-namespace.bicep' = {
-  name: '${abbrs.eventHubsNamespace}${resourceToken}'
-  scope: resourceGroup
-  params: {
-    name: '${abbrs.eventHubsNamespace}${resourceToken}'
-    location: location
-    tags: union(tags, {})
-    sku: {
-      name: 'Basic'
-    }
-  }
-}
-
 resource containerRegistryPull 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: resourceGroup
   name: roles.acrPull
@@ -100,27 +87,6 @@ module containerRegistry 'containers/container-registry.bicep' = {
       {
         principalId: managedIdentity.outputs.principalId
         roleDefinitionId: containerRegistryPull.id
-      }
-    ]
-  }
-}
-
-resource cognitiveServicesLanguageOwner 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: resourceGroup
-  name: roles.cognitiveServicesLanguageOwner
-}
-
-module textAnalytics './ai_ml/text-analytics.bicep' = {
-  name: '${abbrs.languageService}${resourceToken}'
-  scope: resourceGroup
-  params: {
-    name: '${abbrs.languageService}${resourceToken}'
-    location: location
-    tags: union(tags, {})
-    roleAssignments: [
-      {
-        principalId: managedIdentity.outputs.principalId
-        roleDefinitionId: cognitiveServicesLanguageOwner.id
       }
     ]
   }
@@ -153,7 +119,6 @@ resource cognitiveServicesOpenAIUser 'Microsoft.Authorization/roleDefinitions@20
 }
 
 var completionModelDeploymentName = 'gpt-35-turbo'
-var embeddingModelDeploymentName = 'text-embedding-ada-002'
 
 module openAI './ai_ml/openai.bicep' = {
   name: '${abbrs.openAIService}${openAIResourceToken}'
@@ -169,18 +134,6 @@ module openAI './ai_ml/openai.bicep' = {
           format: 'OpenAI'
           name: 'gpt-35-turbo'
           version: '1106'
-        }
-        sku: {
-          name: 'Standard'
-          capacity: 30
-        }
-      }
-      {
-        name: embeddingModelDeploymentName
-        model: {
-          format: 'OpenAI'
-          name: 'text-embedding-ada-002'
-          version: '2'
         }
         sku: {
           name: 'Standard'
@@ -278,22 +231,10 @@ output keyVaultInfo object = {
   uri: keyVault.outputs.uri
 }
 
-output eventHubNamespaceInfo object = {
-  id: eventHubNamespace.outputs.id
-  name: eventHubNamespace.outputs.name
-}
-
 output containerRegistryInfo object = {
   id: containerRegistry.outputs.id
   name: containerRegistry.outputs.name
   loginServer: containerRegistry.outputs.loginServer
-}
-
-output textAnalyticsInfo object = {
-  id: textAnalytics.outputs.id
-  name: textAnalytics.outputs.name
-  endpoint: textAnalytics.outputs.endpoint
-  host: textAnalytics.outputs.host
 }
 
 output documentIntelligenceInfo object = {
@@ -309,7 +250,6 @@ output openAIInfo object = {
   endpoint: openAI.outputs.endpoint
   host: openAI.outputs.host
   completionModelDeploymentName: completionModelDeploymentName
-  embeddingModelDeploymentName: embeddingModelDeploymentName
 }
 
 output logAnalyticsWorkspaceInfo object = {

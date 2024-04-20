@@ -69,6 +69,14 @@ var functionsWebJobStorageVariableName = 'AzureWebJobsStorage'
 var storageConnectionStringSecretName = 'storageconnectionstring'
 var applicationInsightsConnectionStringSecretName = 'applicationinsightsconnectionstring'
 
+module invoicesQueue '../../storage/storage-queue.bicep' = {
+  name: '${abbrs.storageAccount}${appToken}'
+  params: {
+    name: 'invoices'
+    storageAccountName: storageAccountRef.name
+  }
+}
+
 module containerApp '../../containers/container-app.bicep' = {
   name: '${abbrs.containerApp}${appToken}'
   params: {
@@ -150,6 +158,14 @@ module containerApp '../../containers/container-app.bicep' = {
       {
         name: 'OPENAI_EMBEDDING_MODEL_DEPLOYMENT'
         value: openAIEmbeddingModelName
+      }
+      {
+        name: 'INVOICES_STORAGE_ACCOUNT_NAME'
+        value: storageAccountRef.name
+      }
+      {
+        name: 'INVOICES_QUEUE_CONNECTION'
+        secretRef: storageConnectionStringSecretName
       }
       {
         name: 'WEBSITE_HOSTNAME'

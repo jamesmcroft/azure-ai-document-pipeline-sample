@@ -398,5 +398,8 @@ FodyWeavers.xsd
 .idea/
 *.sln.iml
 
+# Azure Functions localsettings file
+local.settings.json
+
 # App Specific
 *Outputs.json
