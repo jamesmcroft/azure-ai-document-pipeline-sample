@@ -98,7 +98,7 @@ public class InvoiceBatchWorkflow(
         }
 
         // Step 3: Get the invoice folders from the blob container.
-        var invoiceFolders = await CallActivityAsync<IEnumerable<IGrouping<string, string>>>(
+        var invoiceFolders = await CallActivityAsync<List<InvoiceFolder>>(
             context,
             nameof(GetInvoiceFoldersActivity),
             input,
@@ -110,16 +110,22 @@ public class InvoiceBatchWorkflow(
     }
 
     [Function(nameof(GetInvoiceFoldersActivity))]
-    public async Task<IEnumerable<IGrouping<string, string>>> GetInvoiceFoldersActivity(
+    public async Task<List<InvoiceFolder>> GetInvoiceFoldersActivity(
         [ActivityTrigger] InvoiceBatchRequest input,
         FunctionContext context)
     {
         using var span = StartActiveSpan(nameof(GetInvoiceFoldersActivity), input);
+        var log = context.GetLogger(nameof(GetInvoiceFoldersActivity));
 
-        return await storageClientFactory
+        var groupedInvoices = await storageClientFactory
             .GetBlobServiceClient(settings.InvoicesStorageAccountName)
             .GetBlobContainerClient(input.Container)
             .GetBlobsByRootFolderAsync();
+
+        log.LogInformation("Found {InvoiceFolderCount} invoice folders in the container.", groupedInvoices.Count);
+
+        return groupedInvoices
+            .Select(group => new InvoiceFolder { Name = group.Key, InvoiceFileNames = group.ToList() }).ToList();
     }
 
     /// <summary>

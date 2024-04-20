@@ -1,10 +1,19 @@
-﻿using Azure.Storage.Blobs;
+using Azure.Storage.Blobs;
 
 namespace AIDocumentPipeline.Shared.Storage;
 
+/// <summary>
+/// Defines a collection of extension methods for working with Azure Blob Storage.
+/// </summary>
 public static class BlobExtensions
 {
-    public static async Task<IEnumerable<IGrouping<string, string>>> GetBlobsByRootFolderAsync(
+    /// <summary>
+    /// Retrieves a list of blob names grouped by their root folder.
+    /// </summary>
+    /// <param name="containerClient">The <see cref="BlobContainerClient"/> to retrieve blobs from.</param>
+    /// <param name="cancellationToken">An optional <see cref="CancellationToken"/> to monitor for cancellation requests.</param>
+    /// <returns>The list of blob names grouped by their root folder.</returns>
+    public static async Task<List<IGrouping<string, string>>> GetBlobsByRootFolderAsync(
         this BlobContainerClient containerClient,
         CancellationToken cancellationToken = default)
     {
@@ -20,6 +29,6 @@ public static class BlobExtensions
             }
         } while (!string.IsNullOrEmpty(continuationToken));
 
-        return blobNames.GroupBy(blobName => blobName.Split('/')[0]);
+        return blobNames.GroupBy(blobName => blobName.Split('/')[0]).ToList();
     }
 }
