@@ -51,6 +51,8 @@ if ($IsLocal -eq '$true') {
     $LocalSettings.Values.DOCUMENT_INTELLIGENCE_ENDPOINT = $DocumentIntelligenceEndpoint
     $LocalSettings.Values.INVOICES_STORAGE_ACCOUNT_NAME = $StorageAccountName
     $LocalSettings | ConvertTo-Json | Out-File -FilePath $LocalSettingsPath -Encoding utf8
+
+    docker-compose up
 }
 else {
     ./infra/apps/AIDocumentPipeline/Deploy-App.ps1 `
