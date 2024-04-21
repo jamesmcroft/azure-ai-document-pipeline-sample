@@ -8,6 +8,11 @@ namespace AIDocumentPipeline.Invoices;
 public class InvoiceFolder : BaseWorkflowRequest
 {
     /// <summary>
+    /// Gets or sets the name of the blob container which contains the invoices.
+    /// </summary>
+    public string? Container { get; set; }
+
+    /// <summary>
     /// Gets or sets the name of the folder.
     /// </summary>
     public string Name { get; set; } = string.Empty;
@@ -21,6 +26,11 @@ public class InvoiceFolder : BaseWorkflowRequest
     public override ValidationResult Validate()
     {
         var result = new ValidationResult();
+
+        if (string.IsNullOrWhiteSpace(Container))
+        {
+            result.AddError($"{nameof(Container)} is required.");
+        }
 
         if (string.IsNullOrWhiteSpace(Name))
         {

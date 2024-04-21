@@ -42,14 +42,14 @@ if ($IsLocal -eq '$true') {
     $OpenAIEndpoint = $InfrastructureOutputs.openAIInfo.value.endpoint
     $OpenAICompletionDeployment = $InfrastructureOutputs.openAIInfo.value.completionModelDeploymentName
     $DocumentIntelligenceEndpoint = $InfrastructureOutputs.documentIntelligenceInfo.value.endpoint
+    $StorageAccountName = $InfrastructureOutputs.storageAccountInfo.value.name
 
-    # Update the ./src/AIDocumentPipeline/local.settings.json file with the values from the infrastructure deployment
     $LocalSettingsPath = './src/AIDocumentPipeline/local.settings.json'
     $LocalSettings = Get-Content -Path $LocalSettingsPath -Raw | ConvertFrom-Json
     $LocalSettings.Values.OPENAI_ENDPOINT = $OpenAIEndpoint
     $LocalSettings.Values.OPENAI_COMPLETION_DEPLOYMENT = $OpenAICompletionDeployment
     $LocalSettings.Values.DOCUMENT_INTELLIGENCE_ENDPOINT = $DocumentIntelligenceEndpoint
-
+    $LocalSettings.Values.INVOICES_STORAGE_ACCOUNT_NAME = $StorageAccountName
     $LocalSettings | ConvertTo-Json | Out-File -FilePath $LocalSettingsPath -Encoding utf8
 }
 else {

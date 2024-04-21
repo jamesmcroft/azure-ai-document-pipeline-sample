@@ -8,7 +8,7 @@ public class ValidationResult
     private readonly List<string> _messages = new();
 
     /// <summary>
-    /// Gets a value indicating whether the validation result is valid.
+    /// Gets a value indicating whether the result is valid.
     /// </summary>
     /// <remarks>
     /// This property is set to <see langword="true"/> by default.
@@ -17,12 +17,12 @@ public class ValidationResult
     public bool IsValid { get; private set; } = true;
 
     /// <summary>
-    /// Gets or sets the validation messages.
+    /// Gets or sets the result messages.
     /// </summary>
     public IEnumerable<string> Messages => _messages;
 
     /// <summary>
-    /// Adds a message to the validation result.
+    /// Adds a message to the result.
     /// </summary>
     /// <param name="message">The message to add.</param>
     public void Add(string message)
@@ -31,7 +31,16 @@ public class ValidationResult
     }
 
     /// <summary>
-    /// Adds an error message to the validation result and sets the result as invalid.
+    /// Adds a range of messages to the result.
+    /// </summary>
+    /// <param name="messages">The messages to add.</param>
+    public void AddRange(IEnumerable<string> messages)
+    {
+        _messages.AddRange(messages);
+    }
+
+    /// <summary>
+    /// Adds an error message to the result and sets the result as invalid.
     /// </summary>
     /// <param name="message">The error message to add.</param>
     public void AddError(string message)
@@ -41,13 +50,13 @@ public class ValidationResult
     }
 
     /// <summary>
-    /// Merges the validation result with another validation result.
+    /// Merges the result with another.
     /// </summary>
     /// <remarks>
-    /// The <see cref="IsValid"/> property is updated to <see langword="false"/> if the other validation result is invalid.
+    /// The <see cref="IsValid"/> property is updated to <see langword="false"/> if the other result is invalid.
     /// </remarks>
-    /// <param name="other">The other validation result to merge.</param>
-    /// <param name="errorMessage">The error message to add if the other validation result is null.</param>
+    /// <param name="other">The other result to merge.</param>
+    /// <param name="errorMessage">The error message to add if the other result is null.</param>
     public void Merge(ValidationResult? other, string? errorMessage = default)
     {
         if (other == null)
@@ -62,7 +71,7 @@ public class ValidationResult
     }
 
     /// <summary>
-    /// Returns a string combining the validation messages.
+    /// Returns a string combining the messages.
     /// </summary>
     /// <returns>The combined validation messages.</returns>
     public override string ToString()

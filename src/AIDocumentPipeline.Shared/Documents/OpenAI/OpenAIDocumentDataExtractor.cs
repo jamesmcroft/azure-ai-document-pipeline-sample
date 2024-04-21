@@ -1,8 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
 using Azure.AI.OpenAI;
-using Json.Schema;
-using Json.Schema.Generation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -26,6 +24,7 @@ public class OpenAIDocumentDataExtractor(
     /// <inheritdoc />
     public async Task<T?> FromContentAsync<T>(
         string documentContent,
+        T schemaObject,
         CancellationToken cancellationToken = default)
         where T : class
     {
@@ -35,12 +34,7 @@ public class OpenAIDocumentDataExtractor(
 
             AddSystemPrompt(options.Value.SystemPrompt, chatOptions.Messages);
 
-            var jsonSchema = new JsonSchemaBuilder()
-                .FromType<T>()
-                .Build()
-                .ToString();
-
-            var extractionMessage = string.Format(CultureInfo.InvariantCulture, ExtractDataPromptFormat, jsonSchema);
+            var extractionMessage = string.Format(CultureInfo.InvariantCulture, ExtractDataPromptFormat, JsonSerializer.Serialize(schemaObject));
             AddUserPrompt(extractionMessage, chatOptions.Messages);
             AddUserPrompt(documentContent, chatOptions.Messages);
 

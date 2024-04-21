@@ -1,5 +1,6 @@
 using AIDocumentPipeline.Invoices;
 using AIDocumentPipeline.Shared.Documents;
+using AIDocumentPipeline.Shared.Documents.OpenAI;
 using AIDocumentPipeline.Shared.Observability;
 using AIDocumentPipeline.Shared.Storage;
 using Microsoft.Extensions.Configuration;
@@ -23,7 +24,10 @@ var host = new HostBuilder()
 
         services.AddAzureBlobStorage(builder.Configuration);
         services.AddDocumentIntelligenceMarkdownConverter(builder.Configuration);
-        services.AddOpenAIDocumentDataExtractor(_ => { }, builder.Configuration);
+        services.AddOpenAIDocumentDataExtractor(options =>
+        {
+            options.DeploymentName = builder.Configuration[OpenAISettings.CompletionModelDeploymentConfigKey];
+        }, builder.Configuration);
 
         services.TryAddSingleton(_ => InvoicesSettings.FromConfiguration(builder.Configuration));
     })

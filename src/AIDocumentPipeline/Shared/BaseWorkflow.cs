@@ -13,11 +13,6 @@ namespace AIDocumentPipeline.Shared;
 public abstract class BaseWorkflow(string name)
 {
     /// <summary>
-    /// Gets the name of the workflow.
-    /// </summary>
-    protected string Name { get; } = name;
-
-    /// <summary>
     /// Defines the tracer for the workflow.
     /// </summary>
     protected readonly Tracer Tracer = TracerProvider.Default.GetTracer(name);
@@ -41,7 +36,7 @@ public abstract class BaseWorkflow(string name)
             input.InjectObservabilityContext(spanContext);
         }
 
-        return durableFunctionClient.ScheduleNewOrchestrationInstanceAsync(Name, input, cancellation: cancellationToken);
+        return durableFunctionClient.ScheduleNewOrchestrationInstanceAsync(name, input, cancellation: cancellationToken);
     }
 
     /// <summary>
