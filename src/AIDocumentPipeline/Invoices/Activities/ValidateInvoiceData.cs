@@ -1,5 +1,7 @@
+using System.Globalization;
 using AIDocumentPipeline.Shared;
 using AIDocumentPipeline.Shared.Observability;
+using AIDocumentPipeline.Shared.Validation;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
@@ -46,8 +48,7 @@ public class ValidateInvoiceData()
 
         if (data.Signatures != null)
         {
-            var distributorSignature = data.Signatures
-                .FirstOrDefault(x => x.Type == InvoiceData.InvoiceDataSignatureType.Distributor);
+            var distributorSignature = GetSignature(data.Signatures, "Distributor");
             if (distributorSignature?.SignedOn == null ||
                 distributorSignature.SignedOn.Value == DateTime.MinValue)
             {
@@ -55,8 +56,7 @@ public class ValidateInvoiceData()
                 result.AddError($"{nameof(data.Signatures)} must contain a distributor signature.");
             }
 
-            var customerSignature = data.Signatures
-                .FirstOrDefault(x => x.Type == InvoiceData.InvoiceDataSignatureType.Customer);
+            var customerSignature = GetSignature(data.Signatures, "Customer");
             if (customerSignature?.SignedOn == null ||
                 customerSignature.SignedOn.Value == DateTime.MinValue)
             {
@@ -86,6 +86,18 @@ public class ValidateInvoiceData()
         }
 
         return Task.FromResult(result);
+    }
+
+    private static InvoiceData.InvoiceDataSignature? GetSignature(
+        IEnumerable<InvoiceData.InvoiceDataSignature> signatures,
+        string type)
+    {
+        return signatures
+            .FirstOrDefault(x =>
+                x.Type != null && x.Type.Contains(
+                    type,
+                    CultureInfo.InvariantCulture,
+                    CompareOptions.IgnoreCase));
     }
 
     public class Request : BaseWorkflowRequest
