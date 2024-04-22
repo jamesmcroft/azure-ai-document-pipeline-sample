@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Azure.Storage.Blobs;
 using Azure.Storage.Sas;
 
@@ -15,10 +16,12 @@ public static class BlobExtensions
     /// Any blobs in the root of the container are grouped into a folder named after the container.
     /// </remarks>
     /// <param name="containerClient">The <see cref="BlobContainerClient"/> to retrieve blobs from.</param>
+    /// <param name="regexFilter">A regular expression filter to apply to the blob names. Default is <see langword="null"/>.</param>
     /// <param name="cancellationToken">An optional <see cref="CancellationToken"/> to monitor for cancellation requests.</param>
     /// <returns>The groupings of blobs by their folder at the root of the container.</returns>
     public static async Task<List<IGrouping<string, string>>> GetBlobsByFolderAtRootAsync(
         this BlobContainerClient containerClient,
+        string? regexFilter = default,
         CancellationToken cancellationToken = default)
     {
         var blobNames = new List<string>();
@@ -32,7 +35,16 @@ public static class BlobExtensions
                                .AsPages(continuationToken)
                                .WithCancellation(cancellationToken))
             {
-                blobNames.AddRange(page.Values.Select(blobItem => blobItem.Name));
+                blobNames.AddRange(page.Values.Where(blobItem =>
+                {
+                    if (string.IsNullOrWhiteSpace(regexFilter))
+                    {
+                        return true;
+                    }
+
+                    var regex = new Regex(regexFilter);
+                    return regex.IsMatch(blobItem.Name);
+                }).Select(blobItem => blobItem.Name));
             }
         } while (!string.IsNullOrEmpty(continuationToken));
 
@@ -74,7 +86,8 @@ public static class BlobExtensions
         if (!blobClient.CanGenerateSasUri)
         {
             // The blob client is constructed with managed identity and cannot generate SAS tokens, so we need to create one manually.
-            var userDelegationKey = await blobServiceClient.GetUserDelegationKeyAsync(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(expiresIn));
+            var userDelegationKey = await blobServiceClient.GetUserDelegationKeyAsync(DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow.AddHours(expiresIn));
             var sasBuilder = new BlobSasBuilder
             {
                 BlobContainerName = containerName,

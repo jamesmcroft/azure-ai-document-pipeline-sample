@@ -25,7 +25,7 @@ public class GetInvoiceFolders(
         var groupedInvoices = await storageClientFactory
             .GetBlobServiceClient(settings.InvoicesStorageAccountName)
             .GetBlobContainerClient(input.Container)
-            .GetBlobsByFolderAtRootAsync();
+            .GetBlobsByFolderAtRootAsync(".*\\.(pdf|docx|html)$");
 
         logger.LogInformation("Found {InvoiceFolderCount} invoice folders in the container.", groupedInvoices.Count);
 
