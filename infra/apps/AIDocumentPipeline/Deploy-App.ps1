@@ -14,7 +14,6 @@
     .\Deploy-App.ps1 -InfrastructureOutputsPath "../../InfrastructureOutputs.json"
 .NOTES
     Author: James Croft
-    Last Updated: 2024-04-20
 #>
 
 param
@@ -65,7 +64,7 @@ $DeploymentOutputs = (az deployment group create --name ai-document-pipeline-app
 
 $DeploymentOutputs | ConvertTo-Json | Out-File -FilePath './AppOutputs.json' -Encoding utf8
 
-Write-Host "Clean up old ${ContainerName} images in Azure Container Registry..."
+Write-Host "Cleaning up old ${ContainerName} images in Azure Container Registry..."
 
 az acr run --cmd "acr purge --filter '${ContainerName}:.*' --untagged --ago 1h" --registry $ContainerRegistryName /dev/null
 

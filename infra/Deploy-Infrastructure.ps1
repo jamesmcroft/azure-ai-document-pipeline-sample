@@ -12,7 +12,6 @@
     .\Deploy-Infrastructure.ps1 -DeploymentName "my-workflows" -Location "westeurope"
 .NOTES
     Author: James Croft
-    Last Updated: 2024-04-20
 #>
 
 param
