@@ -28,22 +28,17 @@ public class ExtractInvoiceDataWorkflow(
         using var span = StartActiveSpan(Name, input);
         var logger = context.CreateReplaySafeLogger(Name);
 
-        var result = new WorkflowResult { WorkflowName = Name };
+        var result = new WorkflowResult { Name = input.Name };
 
         // Step 2: Validate the input.
         var validationResult = input.Validate();
         if (!validationResult.IsValid)
         {
-            result.Merge(
-                result,
-                nameof(InvoiceFolder.Validate),
-                $"{nameof(input)} is invalid.",
-                logger,
-                LogLevel.Error);
+            result.Merge(validationResult);
             return result;
         }
 
-        result.Add(nameof(InvoiceFolder.Validate), $"{nameof(input)} is valid.", logger);
+        result.AddMessage(nameof(InvoiceFolder.Validate), $"{nameof(input)} is valid.", logger);
 
         // Step 3: Process each invoice file.
         foreach (var invoice in input.InvoiceFileNames)
@@ -105,14 +100,10 @@ public class ExtractInvoiceDataWorkflow(
             var invoiceDataValidation = await CallActivityAsync<ValidateInvoiceData.Result>(
                 context,
                 ValidateInvoiceData.Name,
-                new ValidateInvoiceData.Request { Data = invoiceData },
+                new ValidateInvoiceData.Request { InvoiceName = invoice, Data = invoiceData },
                 span.Context);
 
-            result.Merge(
-                invoiceDataValidation,
-                ValidateInvoiceData.Name,
-                $"Validated the extracted data for {invoice}.",
-                logger);
+            result.Merge(invoiceDataValidation);
         }
 
         return result;

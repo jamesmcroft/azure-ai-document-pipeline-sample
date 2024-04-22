@@ -78,22 +78,17 @@ public class ProcessInvoiceBatchWorkflow()
         using var span = StartActiveSpan(Name, input);
         var logger = context.CreateReplaySafeLogger(Name);
 
-        var result = new WorkflowResult { WorkflowName = Name };
+        var result = new WorkflowResult { Name = Name };
 
         // Step 2: Validate the input.
         var validationResult = input.Validate();
         if (!validationResult.IsValid)
         {
-            result.Merge(
-                validationResult,
-                nameof(InvoiceBatchRequest.Validate),
-                $"{nameof(input)} is invalid.",
-                logger,
-                LogLevel.Error);
+            result.Merge(validationResult);
             return result;
         }
 
-        result.Add(nameof(InvoiceBatchRequest.Validate), $"{nameof(input)} is valid.", logger);
+        result.AddMessage(nameof(InvoiceBatchRequest.Validate), $"{nameof(input)} is valid.", logger);
 
         // Step 3: Get the invoice folders from the blob container.
         var invoiceFolders = await CallActivityAsync<List<InvoiceFolder>>(
@@ -102,7 +97,7 @@ public class ProcessInvoiceBatchWorkflow()
             input,
             span.Context);
 
-        result.Add(GetInvoiceFolders.Name, $"Retrieved {invoiceFolders.Count} invoice folders.", logger);
+        result.AddMessage(GetInvoiceFolders.Name, $"Retrieved {invoiceFolders.Count} invoice folders.", logger);
 
         // Step 4: Process the invoices in each folder.
         var extractInvoiceDataTasks = invoiceFolders.Where(folder => folder.Name != input.Container).Select(folder =>
@@ -113,11 +108,7 @@ public class ProcessInvoiceBatchWorkflow()
 
         foreach (var task in extractInvoiceDataTasks)
         {
-            result.Merge(
-                await task,
-                ExtractInvoiceDataWorkflow.Name,
-                "Processed all invoice folders.",
-                logger);
+            result.AddActivityResult(ExtractInvoiceDataWorkflow.Name, "Processed invoice folder.", task.Result, logger);
         }
 
         return result;

@@ -48,7 +48,6 @@ public class InvoiceData
 
     public class InvoiceDataSignature
     {
-        [JsonConverter(typeof(JsonStringEnumConverter))]
         public string? Type { get; set; }
 
         [JsonConverter(typeof(UtcDateTimeConverter))]

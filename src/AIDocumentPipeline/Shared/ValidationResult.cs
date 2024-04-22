@@ -5,38 +5,27 @@ namespace AIDocumentPipeline.Shared;
 /// </summary>
 public class ValidationResult
 {
-    private readonly List<string> _messages = new();
-
     /// <summary>
-    /// Gets a value indicating whether the result is valid.
+    /// Gets or sets a value indicating whether the result is valid.
     /// </summary>
     /// <remarks>
     /// This property is set to <see langword="true"/> by default.
     /// To set the validation result as invalid, use the <see cref="AddError"/> method.
     /// </remarks>
-    public bool IsValid { get; private set; } = true;
+    public bool IsValid { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the result messages.
     /// </summary>
-    public IEnumerable<string> Messages => _messages;
+    public List<string> Messages { get; set; } = new();
 
     /// <summary>
     /// Adds a message to the result.
     /// </summary>
     /// <param name="message">The message to add.</param>
-    public void Add(string message)
+    public void AddMessage(string message)
     {
-        _messages.Add(message);
-    }
-
-    /// <summary>
-    /// Adds a range of messages to the result.
-    /// </summary>
-    /// <param name="messages">The messages to add.</param>
-    public void AddRange(IEnumerable<string> messages)
-    {
-        _messages.AddRange(messages);
+        Messages.Add(message);
     }
 
     /// <summary>
@@ -46,7 +35,7 @@ public class ValidationResult
     public void AddError(string message)
     {
         IsValid = false;
-        Add(message);
+        AddMessage(message);
     }
 
     /// <summary>
@@ -56,18 +45,17 @@ public class ValidationResult
     /// The <see cref="IsValid"/> property is updated to <see langword="false"/> if the other result is invalid.
     /// </remarks>
     /// <param name="other">The other result to merge.</param>
-    /// <param name="errorMessage">The error message to add if the other result is null.</param>
-    public void Merge(ValidationResult? other, string? errorMessage = default)
+    public void Merge(ValidationResult? other)
     {
         if (other == null)
         {
-            AddError(errorMessage ?? "The validation result to merge is invalid.");
+            AddError($"{nameof(other)} is required to merge validation results.");
             return;
         }
 
         IsValid &= other.IsValid;
 
-        _messages.AddRange(other.Messages);
+        Messages.AddRange(other.Messages);
     }
 
     /// <summary>

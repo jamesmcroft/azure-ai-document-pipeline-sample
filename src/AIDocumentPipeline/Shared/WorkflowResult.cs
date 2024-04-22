@@ -3,67 +3,81 @@ using Microsoft.Extensions.Logging;
 namespace AIDocumentPipeline.Shared;
 
 /// <summary>
-/// Defines a model that represents the result of a workflow.
+/// Defines a model that represents the result of a workflow or activity.
 /// </summary>
 public class WorkflowResult : ValidationResult
 {
-    private const string ResultMessageFormat = "{WorkflowName}::{WorkflowAction} - {WorkflowActionMessage}";
+    private const string ResultMessageFormat = "{Name}::{Action} - {Message}";
 
     /// <summary>
-    /// Gets or sets the name of the workflow.
+    /// Gets or sets a unique name to represent the result.
     /// </summary>
-    public string WorkflowName { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Adds a result to the workflow.
+    /// Gets or sets a collection of results associated with actions performed during the workflow.
+    /// </summary>
+    public List<WorkflowResult> ActivityResults { get; set; } = new();
+
+    /// <summary>
+    /// Adds a message to the result and logs the message using the specified logger.
     /// </summary>
     /// <param name="action">The action that was performed.</param>
     /// <param name="message">The message to add to the results.</param>
     /// <param name="logger">The logger to use for logging the result.</param>
     /// <param name="logLevel">The log level to use when logging the result.</param>
-    public void Add(string action, string message, ILogger? logger = default, LogLevel logLevel = LogLevel.Information)
-    {
-        Add($"{WorkflowName}::{action} - {message}");
-        logger?.Log(logLevel, ResultMessageFormat, WorkflowName, action, message);
-    }
-
-    /// <summary>
-    /// Adds a range of results to the workflow.
-    /// </summary>
-    /// <param name="action">The action that was performed.</param>
-    /// <param name="message">The message to add to the log.</param>
-    /// <param name="results">The results to add.</param>
-    /// <param name="logger">The logger to use for logging the result.</param>
-    /// <param name="logLevel">The log level to use when logging the result.</param>
-    public void AddRange(
+    public void AddMessage(
         string action,
         string message,
-        IEnumerable<string> results,
         ILogger? logger = default,
         LogLevel logLevel = LogLevel.Information)
     {
-        AddRange(results);
-        logger?.Log(logLevel, ResultMessageFormat, WorkflowName, action, message);
+        AddMessage($"{Name}::{action} - {message}");
+        logger?.Log(logLevel, ResultMessageFormat, Name, action, message);
     }
 
+    /// <summary>
+    /// Adds an error message to the result and logs the message using the specified logger.
+    /// </summary>
+    /// <param name="action">The action that was performed.</param>
+    /// <param name="message">The error message to add to the results.</param>
+    /// <param name="logger">The logger to use for logging the result.</param>
+    /// <param name="logLevel">The log level to use when logging the result.</param>
     public void AddError(
         string action,
         string message,
         ILogger? logger = default,
         LogLevel logLevel = LogLevel.Warning)
     {
-        AddError($"{WorkflowName}::{action} - {message}");
-        logger?.Log(logLevel, ResultMessageFormat, WorkflowName, action, message);
+        AddError($"{Name}::{action} - {message}");
+        logger?.Log(logLevel, ResultMessageFormat, Name, action, message);
     }
 
-    public void Merge(
-        ValidationResult? other,
+    /// <summary>
+    /// Adds a result to the collection of activity results and logs the message using the specified logger.
+    /// </summary>
+    /// <param name="action">The action that was performed.</param>
+    /// <param name="message">The message to add to the results.</param>
+    /// <param name="result">The result of the action.</param>
+    /// <param name="logger">The logger to use for logging the result.</param>
+    /// <param name="logLevel">The log level to use when logging the result.</param>
+    public void AddActivityResult(
         string action,
         string message,
+        WorkflowResult result,
         ILogger? logger = default,
         LogLevel logLevel = LogLevel.Information)
     {
-        Merge(other);
-        logger?.Log(logLevel, ResultMessageFormat, WorkflowName, action, message);
+        ActivityResults.Add(result);
+        logger?.Log(logLevel, ResultMessageFormat, Name, action, message);
+    }
+
+    /// <summary>
+    /// Returns the name of the result.
+    /// </summary>
+    /// <returns>The name of the result.</returns>
+    public override string ToString()
+    {
+        return Name;
     }
 }

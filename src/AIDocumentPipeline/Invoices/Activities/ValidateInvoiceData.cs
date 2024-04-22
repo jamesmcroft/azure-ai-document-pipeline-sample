@@ -21,14 +21,12 @@ public class ValidateInvoiceData()
         using var span = StartActiveSpan(Name, input);
         var logger = context.GetLogger(Name);
 
+        var result = new Result { Name = input.InvoiceName ?? Name };
+
         var validationResult = input.Validate();
-
-        var result = new Result();
-        result.Merge(validationResult);
-
         if (!result.IsValid)
         {
-            logger.LogError("Invalid input: {ValidationErrors}", result);
+            result.Merge(validationResult);
             return Task.FromResult(result);
         }
 
@@ -37,13 +35,21 @@ public class ValidateInvoiceData()
         if (string.IsNullOrWhiteSpace(data.CustomerName))
         {
             result.Status |= ResultStatus.CustomerNameMissing;
-            result.AddError($"{nameof(data.CustomerName)} is required.");
+            result.AddError(
+                Name,
+                $"{nameof(data.CustomerName)} is required.",
+                logger,
+                LogLevel.Error);
         }
 
         if (data.Signatures == null)
         {
             result.Status |= ResultStatus.DistributorSignatureMissing | ResultStatus.CustomerSignatureMissing;
-            result.AddError($"{nameof(data.Signatures)} is required.");
+            result.AddError(
+                Name,
+                $"{nameof(data.Signatures)} is required.",
+                logger,
+                LogLevel.Error);
         }
 
         if (data.Signatures != null)
@@ -53,7 +59,11 @@ public class ValidateInvoiceData()
                 distributorSignature.SignedOn.Value == DateTime.MinValue)
             {
                 result.Status |= ResultStatus.DistributorSignatureMissing;
-                result.AddError($"{nameof(data.Signatures)} must contain a distributor signature.");
+                result.AddError(
+                    Name,
+                    $"{nameof(data.Signatures)} must contain a distributor signature.",
+                    logger,
+                    LogLevel.Error);
             }
 
             var customerSignature = GetSignature(data.Signatures, "Customer");
@@ -61,7 +71,11 @@ public class ValidateInvoiceData()
                 customerSignature.SignedOn.Value == DateTime.MinValue)
             {
                 result.Status |= ResultStatus.CustomerSignatureMissing;
-                result.AddError($"{nameof(data.Signatures)} must contain a customer signature.");
+                result.AddError(
+                    Name,
+                    $"{nameof(data.Signatures)} must contain a customer signature.",
+                    logger,
+                    LogLevel.Error);
             }
         }
 
@@ -70,13 +84,21 @@ public class ValidateInvoiceData()
             if (!data.Products.Sum(x => x.Quantity).Equals(data.TotalQuantity))
             {
                 result.Status |= ResultStatus.ProductsTotalQuantityInvalid;
-                result.AddError($"{nameof(data.Products)} quantity total must match {nameof(data.TotalQuantity)}.");
+                result.AddError(
+                    Name,
+                    $"{nameof(data.Products)} quantity total must match {nameof(data.TotalQuantity)}.",
+                    logger,
+                    LogLevel.Error);
             }
 
             if (!data.Products.Sum(x => x.Total).Equals(data.TotalPrice))
             {
                 result.Status |= ResultStatus.ProductsTotalPriceInvalid;
-                result.AddError($"{nameof(data.Products)} price total must match {nameof(data.TotalPrice)}.");
+                result.AddError(
+                    Name,
+                    $"{nameof(data.Products)} price total must match {nameof(data.TotalPrice)}.",
+                    logger,
+                    LogLevel.Error);
             }
         }
 
@@ -102,11 +124,18 @@ public class ValidateInvoiceData()
 
     public class Request : BaseWorkflowRequest
     {
+        public string? InvoiceName { get; set; }
+
         public InvoiceData? Data { get; set; }
 
         public override ValidationResult Validate()
         {
             var result = new ValidationResult();
+
+            if (string.IsNullOrWhiteSpace(InvoiceName))
+            {
+                result.AddError($"{nameof(InvoiceName)} is required.");
+            }
 
             if (Data == null)
             {
@@ -117,7 +146,7 @@ public class ValidateInvoiceData()
         }
     }
 
-    public class Result : ValidationResult
+    public class Result : WorkflowResult
     {
         public ResultStatus Status { get; set; }
     }
