@@ -28,13 +28,17 @@ param
     [string]$SkipInfrastructure
 )
 
+Write-Host "Starting environment setup..."
+
 if ($SkipInfrastructure -eq '$false' || -not (Test-Path -Path './infra/InfrastructureOutputs.json')) {
+    Write-Host "Deploying infrastructure..."
     $InfrastructureOutputs = (./infra/Deploy-Infrastructure.ps1 `
             -DeploymentName $DeploymentName `
             -Location $Location `
             -ErrorAction Stop)
 }
 else {
+    Write-Host "Skipping infrastructure deployment. Using existing outputs..."
     $InfrastructureOutputs = Get-Content -Path './infra/InfrastructureOutputs.json' -Raw | ConvertFrom-Json
 }
 
@@ -44,6 +48,8 @@ if ($IsLocal -eq '$true') {
     $DocumentIntelligenceEndpoint = $InfrastructureOutputs.documentIntelligenceInfo.value.endpoint
     $StorageAccountName = $InfrastructureOutputs.storageAccountInfo.value.name
 
+    Write-Host "Updating local settings..."
+
     $LocalSettingsPath = './src/AIDocumentPipeline/local.settings.json'
     $LocalSettings = Get-Content -Path $LocalSettingsPath -Raw | ConvertFrom-Json
     $LocalSettings.Values.OPENAI_ENDPOINT = $OpenAIEndpoint
@@ -52,9 +58,13 @@ if ($IsLocal -eq '$true') {
     $LocalSettings.Values.INVOICES_STORAGE_ACCOUNT_NAME = $StorageAccountName
     $LocalSettings | ConvertTo-Json | Out-File -FilePath $LocalSettingsPath -Encoding utf8
 
+    Write-Host "Starting local environment..."
+
     docker-compose up
 }
 else {
+    Write-Host "Deploying AI Document Pipeline app..."
+
     ./infra/apps/AIDocumentPipeline/Deploy-App.ps1 `
         -InfrastructureOutputsPath './infra/InfrastructureOutputs.json' `
         -ErrorAction Stop
