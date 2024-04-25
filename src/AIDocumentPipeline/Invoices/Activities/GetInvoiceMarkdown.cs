@@ -31,12 +31,12 @@ public class GetInvoiceMarkdown(
             return null;
         }
 
-        var blobUri = await storageClientFactory.GenerateBlobSasUriAsync(
+        await using var blobContentStream = await storageClientFactory.GetBlobContentAsync(
             settings.InvoicesStorageAccountName,
             input.Container!,
             input.FileName!);
 
-        return await documentMarkdownConverter.FromUriAsync(blobUri);
+        return await documentMarkdownConverter.FromByteArrayAsync(blobContentStream.ToArray());
     }
 
     public class Request : BaseWorkflowRequest
