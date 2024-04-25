@@ -59,6 +59,56 @@ public static class BlobExtensions
     }
 
     /// <summary>
+    /// Retrieves the URI for a specific blob in a specific container.
+    /// </summary>
+    /// <param name="clientFactory">The <see cref="AzureStorageClientFactory"/> to use for creating the blob URI.</param>
+    /// <param name="storageAccountName">The name of the storage account containing the blob.</param>
+    /// <param name="containerName">The name of the container containing the blob.</param>
+    /// <param name="blobName">The name of the blob to retrieve the URI for.</param>
+    /// <returns>The URI for the specified blob.</returns>
+    public static string GetBlobUri(
+        this AzureStorageClientFactory clientFactory,
+        string storageAccountName,
+        string containerName,
+        string blobName)
+    {
+        var blobServiceClient = clientFactory
+            .GetBlobServiceClient(storageAccountName);
+
+        var blobClient = blobServiceClient
+            .GetBlobContainerClient(containerName)
+            .GetBlobClient(blobName);
+
+        return blobClient.Uri.ToString();
+    }
+
+    /// <summary>
+    /// Gets the content of a specific blob in a specific container as a stream.
+    /// </summary>
+    /// <param name="clientFactory">The <see cref="AzureStorageClientFactory"/> to use for creating the blob client.</param>
+    /// <param name="storageAccountName">The name of the storage account containing the blob.</param>
+    /// <param name="containerName">The name of the container containing the blob.</param>
+    /// <param name="blobName">The name of the blob to retrieve the content for.</param>
+    /// <returns>A <see cref="Stream"/> containing the content of the specified blob.</returns>
+    public static async Task<MemoryStream> GetBlobContentAsync(
+        this AzureStorageClientFactory clientFactory,
+        string storageAccountName,
+        string containerName,
+        string blobName)
+    {
+        var blobServiceClient = clientFactory
+            .GetBlobServiceClient(storageAccountName);
+
+        var blobClient = blobServiceClient
+            .GetBlobContainerClient(containerName)
+            .GetBlobClient(blobName);
+
+        var memoryStream = new MemoryStream();
+        await blobClient.DownloadToAsync(memoryStream);
+        return memoryStream;
+    }
+
+    /// <summary>
     /// Generates a shared access signature (SAS) URI for specific blob in a specific container.
     /// </summary>
     /// <param name="clientFactory">The <see cref="AzureStorageClientFactory"/> to use for creating the SAS URI.</param>
@@ -85,7 +135,7 @@ public static class BlobExtensions
 
         if (!blobClient.CanGenerateSasUri)
         {
-            // The blob client is constructed with managed identity and cannot generate SAS tokens, so we need to create one manually.
+            // The blob client cannot generate SAS tokens, so we need to create one manually.
             var userDelegationKey = await blobServiceClient.GetUserDelegationKeyAsync(DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow.AddHours(expiresIn));
             var sasBuilder = new BlobSasBuilder
