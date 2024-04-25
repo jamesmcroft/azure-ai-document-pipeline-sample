@@ -66,7 +66,7 @@ resource containerAppsEnvironmentRef 'Microsoft.App/managedEnvironments@2023-05-
 
 var appToken = toLower(uniqueString(subscription().id, workloadName, location, 'ai-document-pipeline'))
 var functionsWebJobStorageVariableName = 'AzureWebJobsStorage'
-var storageConnectionStringSecretName = 'storageconnectionstring'
+var invoicesConnectionStringVariableName = 'INVOICES_QUEUE_CONNECTION'
 var applicationInsightsConnectionStringSecretName = 'applicationinsightsconnectionstring'
 
 module invoicesQueue '../../storage/storage-queue.bicep' = {
@@ -110,10 +110,6 @@ module containerApp '../../containers/container-app.bicep' = {
     }
     secrets: [
       {
-        name: storageConnectionStringSecretName
-        value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountRef.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccountRef.listKeys().keys[0].value}'
-      }
-      {
         name: applicationInsightsConnectionStringSecretName
         value: applicationInsightsRef.properties.ConnectionString
       }
@@ -132,8 +128,16 @@ module containerApp '../../containers/container-app.bicep' = {
         secretRef: applicationInsightsConnectionStringSecretName
       }
       {
-        name: functionsWebJobStorageVariableName
-        secretRef: storageConnectionStringSecretName
+        name: '${functionsWebJobStorageVariableName}__accountName'
+        value: storageAccountRef.name
+      }
+      {
+        name: '${functionsWebJobStorageVariableName}__credential'
+        value: 'managedidentity'
+      }
+      {
+        name: '${functionsWebJobStorageVariableName}__clientId'
+        value: managedIdentityRef.properties.clientId
       }
       {
         name: 'MANAGED_IDENTITY_CLIENT_ID'
@@ -164,8 +168,16 @@ module containerApp '../../containers/container-app.bicep' = {
         value: storageAccountRef.name
       }
       {
-        name: 'INVOICES_QUEUE_CONNECTION'
-        secretRef: storageConnectionStringSecretName
+        name: '${invoicesConnectionStringVariableName}__accountName'
+        value: storageAccountRef.name
+      }
+      {
+        name: '${invoicesConnectionStringVariableName}__credential'
+        value: 'managedidentity'
+      }
+      {
+        name: '${invoicesConnectionStringVariableName}__clientId'
+        value: managedIdentityRef.properties.clientId
       }
       {
         name: 'WEBSITE_HOSTNAME'
