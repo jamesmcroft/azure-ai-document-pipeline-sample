@@ -37,31 +37,31 @@ var documentIntelligenceResourceToken = toLower(uniqueString(
 var openAIResourceToken = toLower(uniqueString(subscription().id, workloadName, openAILocation))
 
 resource managedIdentityRef 'Microsoft.ManagedIdentity/userAssignedIdentities@2022-01-31-preview' existing = {
-  name: '${abbrs.managedIdentity}${resourceToken}'
+  name: '${abbrs.security.managedIdentity}${resourceToken}'
 }
 
 resource containerRegistryRef 'Microsoft.ContainerRegistry/registries@2022-12-01' existing = {
-  name: '${abbrs.containerRegistry}${resourceToken}'
+  name: '${abbrs.containers.containerRegistry}${resourceToken}'
 }
 
 resource applicationInsightsRef 'Microsoft.Insights/components@2020-02-02' existing = {
-  name: '${abbrs.applicationInsights}${resourceToken}'
+  name: '${abbrs.managementGovernance.applicationInsights}${resourceToken}'
 }
 
 resource storageAccountRef 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
-  name: '${abbrs.storageAccount}${resourceToken}'
+  name: '${abbrs.storage.storageAccount}${resourceToken}'
 }
 
 resource documentIntelligenceRef 'Microsoft.CognitiveServices/accounts@2023-10-01-preview' existing = {
-  name: '${abbrs.documentIntelligence}${documentIntelligenceResourceToken}'
+  name: '${abbrs.ai.documentIntelligence}${documentIntelligenceResourceToken}'
 }
 
 resource openAIRef 'Microsoft.CognitiveServices/accounts@2023-10-01-preview' existing = {
-  name: '${abbrs.openAIService}${openAIResourceToken}'
+  name: '${abbrs.ai.openAIService}${openAIResourceToken}'
 }
 
 resource containerAppsEnvironmentRef 'Microsoft.App/managedEnvironments@2023-05-01' existing = {
-  name: '${abbrs.containerAppsEnvironment}${resourceToken}'
+  name: '${abbrs.containers.containerAppsEnvironment}${resourceToken}'
 }
 
 var appToken = toLower(uniqueString(subscription().id, workloadName, location, 'ai-document-pipeline'))
@@ -70,7 +70,7 @@ var invoicesConnectionStringVariableName = 'INVOICES_QUEUE_CONNECTION'
 var applicationInsightsConnectionStringSecretName = 'applicationinsightsconnectionstring'
 
 module invoicesQueue '../../storage/storage-queue.bicep' = {
-  name: '${abbrs.storageAccount}${appToken}'
+  name: '${abbrs.storage.storageAccount}${appToken}'
   params: {
     name: 'invoices'
     storageAccountName: storageAccountRef.name
@@ -78,9 +78,9 @@ module invoicesQueue '../../storage/storage-queue.bicep' = {
 }
 
 module containerApp '../../containers/container-app.bicep' = {
-  name: '${abbrs.containerApp}${appToken}'
+  name: '${abbrs.containers.containerApp}${appToken}'
   params: {
-    name: '${abbrs.containerApp}${appToken}'
+    name: '${abbrs.containers.containerApp}${appToken}'
     location: location
     tags: union(tags, { App: 'ai-document-pipeline' })
     containerAppsEnvironmentId: containerAppsEnvironmentRef.id

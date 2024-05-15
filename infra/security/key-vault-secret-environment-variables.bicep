@@ -1,28 +1,21 @@
-@description('Defines the output model for an environment variable for an application.')
-type appEnvironmentVariableInfo = {
-  @description('Name of the environment variable for the application.')
+@description('URI for the Key Vault associated with the environment variables.')
+param keyVaultSecretUri string
+@description('Names of the environment variables to retrieve from Key Vault Secrets.')
+param variableNames array
+
+@export()
+@description('Information about the environment variables containing the name and a value represented as a Key Vault Secret URI.')
+type environmentVariableInfo = {
   name: string
-  @description('Value of the environment variable represented as a Key Vault Secret URI.')
   value: string
 }
 
-@description('Defines the input model for an environment variable and the Key Vault Secret URI containing the value for the environment variable.')
-type keyVaultEnvironmentVariableInfo = {
-  @description('Name of the environment variable for the application.')
-  name: string
-  @description('URI of the Key Vault Secret containing the value for the environment variable.')
-  keyVaultSecretUri: string
-}
-
-@description('Names of the environment variables to retrieve from Key Vault Secrets.')
-param keyVaultVariables keyVaultEnvironmentVariableInfo[]
-
-var appVariables = [
-  for variable in keyVaultVariables: {
-    name: variable.name
-    value: '@Microsoft.KeyVault(SecretUri=${variable.keyVaultSecretUri})'
+var keyVaultSettings = [
+  for setting in variableNames: {
+    name: setting
+    value: '@Microsoft.KeyVault(SecretUri=${keyVaultSecretUri}secrets/${setting})'
   }
 ]
 
 @description('Environment variables containing the name and a value represented as a Key Vault Secret URI.')
-output environmentVariables appEnvironmentVariableInfo[] = appVariables
+output environmentVariables environmentVariableInfo[] = keyVaultSettings

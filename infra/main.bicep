@@ -31,16 +31,16 @@ var documentIntelligenceResourceToken = toLower(uniqueString(
 var openAIResourceToken = toLower(uniqueString(subscription().id, workloadName, openAILocation))
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: !empty(resourceGroupName) ? resourceGroupName : '${abbrs.resourceGroup}${workloadName}'
+  name: !empty(resourceGroupName) ? resourceGroupName : '${abbrs.managementGovernance.resourceGroup}${workloadName}'
   location: location
   tags: union(tags, {})
 }
 
 module managedIdentity './security/managed-identity.bicep' = {
-  name: '${abbrs.managedIdentity}${resourceToken}'
+  name: '${abbrs.security.managedIdentity}${resourceToken}'
   scope: resourceGroup
   params: {
-    name: '${abbrs.managedIdentity}${resourceToken}'
+    name: '${abbrs.security.managedIdentity}${resourceToken}'
     location: location
     tags: union(tags, {})
   }
@@ -48,14 +48,14 @@ module managedIdentity './security/managed-identity.bicep' = {
 
 resource keyVaultSecretsOfficer 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: resourceGroup
-  name: roles.keyVaultSecretsOfficer
+  name: roles.security.keyVaultSecretsOfficer
 }
 
 module keyVault './security/key-vault.bicep' = {
-  name: '${abbrs.keyVault}${resourceToken}'
+  name: '${abbrs.security.keyVault}${resourceToken}'
   scope: resourceGroup
   params: {
-    name: '${abbrs.keyVault}${resourceToken}'
+    name: '${abbrs.security.keyVault}${resourceToken}'
     location: location
     tags: union(tags, {})
     roleAssignments: [
@@ -69,14 +69,14 @@ module keyVault './security/key-vault.bicep' = {
 
 resource containerRegistryPull 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: resourceGroup
-  name: roles.acrPull
+  name: roles.containers.acrPull
 }
 
 module containerRegistry 'containers/container-registry.bicep' = {
-  name: '${abbrs.containerRegistry}${resourceToken}'
+  name: '${abbrs.containers.containerRegistry}${resourceToken}'
   scope: resourceGroup
   params: {
-    name: '${abbrs.containerRegistry}${resourceToken}'
+    name: '${abbrs.containers.containerRegistry}${resourceToken}'
     location: location
     tags: union(tags, {})
     sku: {
@@ -94,14 +94,14 @@ module containerRegistry 'containers/container-registry.bicep' = {
 
 resource cognitiveServicesUser 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: resourceGroup
-  name: roles.cognitiveServicesUser
+  name: roles.ai.cognitiveServicesUser
 }
 
 module documentIntelligence './ai_ml/document-intelligence.bicep' = {
-  name: '${abbrs.documentIntelligence}${documentIntelligenceResourceToken}'
+  name: '${abbrs.ai.documentIntelligence}${documentIntelligenceResourceToken}'
   scope: resourceGroup
   params: {
-    name: '${abbrs.documentIntelligence}${documentIntelligenceResourceToken}'
+    name: '${abbrs.ai.documentIntelligence}${documentIntelligenceResourceToken}'
     location: documentIntelligenceLocation
     tags: union(tags, {})
     roleAssignments: [
@@ -115,16 +115,16 @@ module documentIntelligence './ai_ml/document-intelligence.bicep' = {
 
 resource cognitiveServicesOpenAIUser 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: resourceGroup
-  name: roles.cognitiveServicesOpenAIUser
+  name: roles.ai.cognitiveServicesOpenAIUser
 }
 
 var completionModelDeploymentName = 'gpt-35-turbo'
 
 module openAI './ai_ml/openai.bicep' = {
-  name: '${abbrs.openAIService}${openAIResourceToken}'
+  name: '${abbrs.ai.openAIService}${openAIResourceToken}'
   scope: resourceGroup
   params: {
-    name: '${abbrs.openAIService}${openAIResourceToken}'
+    name: '${abbrs.ai.openAIService}${openAIResourceToken}'
     location: openAILocation
     tags: union(tags, {})
     deployments: [
@@ -151,20 +151,20 @@ module openAI './ai_ml/openai.bicep' = {
 }
 
 module logAnalyticsWorkspace './management_governance/log-analytics-workspace.bicep' = {
-  name: '${abbrs.logAnalyticsWorkspace}${resourceToken}'
+  name: '${abbrs.managementGovernance.logAnalyticsWorkspace}${resourceToken}'
   scope: resourceGroup
   params: {
-    name: '${abbrs.logAnalyticsWorkspace}${resourceToken}'
+    name: '${abbrs.managementGovernance.logAnalyticsWorkspace}${resourceToken}'
     location: location
     tags: union(tags, {})
   }
 }
 
 module applicationInsights './management_governance/application-insights.bicep' = {
-  name: '${abbrs.applicationInsights}${resourceToken}'
+  name: '${abbrs.managementGovernance.applicationInsights}${resourceToken}'
   scope: resourceGroup
   params: {
-    name: '${abbrs.applicationInsights}${resourceToken}'
+    name: '${abbrs.managementGovernance.applicationInsights}${resourceToken}'
     location: location
     tags: union(tags, {})
     logAnalyticsWorkspaceName: logAnalyticsWorkspace.outputs.name
@@ -176,29 +176,29 @@ module applicationInsights './management_governance/application-insights.bicep' 
 
 resource storageAccountContributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: resourceGroup
-  name: roles.storageAccountContributor
+  name: roles.storage.storageAccountContributor
 }
 
 resource storageBlobDataOwner 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: resourceGroup
-  name: roles.storageBlobDataOwner
+  name: roles.storage.storageBlobDataOwner
 }
 
 resource storageQueueDataContributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: resourceGroup
-  name: roles.storageQueueDataContributor
+  name: roles.storage.storageQueueDataContributor
 }
 
 resource storageTableDataContributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: resourceGroup
-  name: roles.storageTableDataContributor
+  name: roles.storage.storageTableDataContributor
 }
 
 module storageAccount './storage/storage-account.bicep' = {
-  name: '${abbrs.storageAccount}${resourceToken}'
+  name: '${abbrs.storage.storageAccount}${resourceToken}'
   scope: resourceGroup
   params: {
-    name: '${abbrs.storageAccount}${resourceToken}'
+    name: '${abbrs.storage.storageAccount}${resourceToken}'
     location: location
     tags: union(tags, {})
     sku: {
@@ -226,14 +226,19 @@ module storageAccount './storage/storage-account.bicep' = {
 }
 
 module containerAppsEnvironment 'containers/container-apps-environment.bicep' = {
-  name: '${abbrs.containerAppsEnvironment}${resourceToken}'
+  name: '${abbrs.containers.containerAppsEnvironment}${resourceToken}'
   scope: resourceGroup
   params: {
-    name: '${abbrs.containerAppsEnvironment}${resourceToken}'
+    name: '${abbrs.containers.containerAppsEnvironment}${resourceToken}'
     location: location
     tags: union(tags, {})
     logAnalyticsWorkspaceName: logAnalyticsWorkspace.outputs.name
   }
+}
+
+output subscriptionInfo object = {
+  id: subscription().subscriptionId
+  tenantId: subscription().tenantId
 }
 
 output resourceGroupInfo object = {

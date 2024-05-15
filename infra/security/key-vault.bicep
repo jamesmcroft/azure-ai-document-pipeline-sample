@@ -1,14 +1,11 @@
+import { roleAssignmentInfo } from '../security/managed-identity.bicep'
+
 @description('Name of the resource.')
 param name string
 @description('Location to deploy the resource. Defaults to the location of the resource group.')
 param location string = resourceGroup().location
 @description('Tags for the resource.')
 param tags object = {}
-
-type roleAssignmentInfo = {
-  roleDefinitionId: string
-  principalId: string
-}
 
 @description('Key Vault SKU name. Defaults to standard.')
 @allowed([
@@ -18,6 +15,10 @@ type roleAssignmentInfo = {
 param skuName string = 'standard'
 @description('Whether soft deletion is enabled. Defaults to true.')
 param enableSoftDelete bool = true
+@description('Number of days to retain soft-deleted keys, secrets, and certificates. Defaults to 90.')
+param retentionInDays int = 90
+@description('Whether purge protection is enabled. Defaults to true.')
+param enablePurgeProtection bool = true
 @description('Role assignments to create for the Key Vault.')
 param roleAssignments roleAssignmentInfo[] = []
 
@@ -32,12 +33,16 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
     }
     tenantId: subscription().tenantId
     networkAcls: {
-      defaultAction: 'Allow'
+      defaultAction: 'Deny'
       bypass: 'AzureServices'
+      ipRules: []
+      virtualNetworkRules: []
     }
     enableSoftDelete: enableSoftDelete
     enabledForTemplateDeployment: true
     enableRbacAuthorization: true
+    enablePurgeProtection: enablePurgeProtection
+    softDeleteRetentionInDays: retentionInDays
   }
 }
 

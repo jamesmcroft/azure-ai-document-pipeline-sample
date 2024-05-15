@@ -5,6 +5,19 @@ param location string = resourceGroup().location
 @description('Tags for the resource.')
 param tags object = {}
 
+@export()
+@description('Information about the configuration for a custom domain in the environment.')
+type customDomainConfigInfo = {
+  @description('Name of the custom domain.')
+  dnsSuffix: string
+  @description('Value of the custom domain certificate.')
+  certificateValue: string
+  @description('Password for the custom domain certificate.')
+  certificatePassword: string
+}
+
+@export()
+@description('Information about the configuration for a virtual network in the environment.')
 type vnetConfigInfo = {
   @description('Resource ID of a subnet for infrastructure components.')
   infrastructureSubnetId: string
@@ -12,13 +25,14 @@ type vnetConfigInfo = {
   internal: bool
 }
 
-type logAnalyticsConfigInfo = {
-  @description('Name of the Log Analytics workspace.')
-  name: string
-}
-
 @description('Name of the Log Analytics Workspace to store application logs.')
 param logAnalyticsWorkspaceName string
+@description('Custom domain configuration for the environment.')
+param customDomainConfig customDomainConfigInfo = {
+  dnsSuffix: ''
+  certificateValue: ''
+  certificatePassword: ''
+}
 @description('Virtual network configuration for the environment.')
 param vnetConfig vnetConfigInfo = {
   infrastructureSubnetId: ''
@@ -49,6 +63,7 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
         workloadProfileType: 'Consumption'
       }
     ]
+    customDomainConfiguration: !empty(customDomainConfig.dnsSuffix) ? customDomainConfig : {}
     vnetConfiguration: !empty(vnetConfig.infrastructureSubnetId) ? vnetConfig : {}
     zoneRedundant: zoneRedundant
   }

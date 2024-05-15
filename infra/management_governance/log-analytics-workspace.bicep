@@ -5,13 +5,11 @@ param location string = resourceGroup().location
 @description('Tags for the resource.')
 param tags object = {}
 
+@export()
+@description('SKU information for Log Analytics Workspace.')
 type skuInfo = {
+  @description('Name of the SKU.')
   name: 'CapacityReservation' | 'Free' | 'LACluster' | 'PerGB2018' | 'PerNode' | 'Premium' | 'Standalone' | 'Standard'
-}
-
-type keyVaultSecretsInfo = {
-  keyVaultName: string
-  primarySharedKeySecretName: string
 }
 
 @description('Log Analytics Workspace SKU. Defaults to PerGB2018.')
@@ -20,11 +18,6 @@ param sku skuInfo = {
 }
 @description('Retention period (in days) for the Log Analytics Workspace. Defaults to 30.')
 param retentionInDays int = 30
-@description('Properties to store in a Key Vault.')
-param keyVaultConfig keyVaultSecretsInfo = {
-  keyVaultName: ''
-  primarySharedKeySecretName: ''
-}
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: name
@@ -40,16 +33,6 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
     publicNetworkAccessForQuery: 'Enabled'
   }
 }
-
-module primarySharedKeySecret '../security/key-vault-secret.bicep' =
-  if (!empty(keyVaultConfig.primarySharedKeySecretName)) {
-    name: '${keyVaultConfig.primarySharedKeySecretName}-secret'
-    params: {
-      keyVaultName: keyVaultConfig.keyVaultName
-      name: keyVaultConfig.primarySharedKeySecretName
-      value: logAnalyticsWorkspace.listKeys().primarySharedKey
-    }
-  }
 
 @description('ID for the deployed Log Analytics Workspace resource.')
 output id string = logAnalyticsWorkspace.id
