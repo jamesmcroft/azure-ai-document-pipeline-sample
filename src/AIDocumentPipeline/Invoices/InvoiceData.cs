@@ -4,34 +4,65 @@ namespace AIDocumentPipeline.Invoices;
 
 public class InvoiceData
 {
+    public string? InvoiceNumber { get; set; }
+
+    public string? PurchaseOrderNumber { get; set; }
+
     public string? CustomerName { get; set; }
 
+    public string? CustomerAddress { get; set; }
+
     [JsonConverter(typeof(UtcDateTimeConverter))]
-    public DateTime? InvoiceDate { get; set; }
+    public DateTime? DeliveryDate { get; set; }
+
+    [JsonConverter(typeof(UtcDateTimeConverter))]
+    public DateTime? PayableBy { get; set; }
 
     public IEnumerable<InvoiceDataProduct>? Products { get; set; }
+
+    public IEnumerable<InvoiceDataProduct>? Returns { get; set; }
 
     public double? TotalQuantity { get; set; }
 
     public double? TotalPrice { get; set; }
 
-    public IEnumerable<InvoiceDataSignature>? Signatures { get; set; }
+    public IEnumerable<InvoiceDataSignature>? ProductsSignatures { get; set; }
+
+    public IEnumerable<InvoiceDataSignature>? ReturnsSignatures { get; set; }
 
     public static InvoiceData Empty => new()
     {
+        InvoiceNumber = string.Empty,
+        PurchaseOrderNumber = string.Empty,
         CustomerName = string.Empty,
-        InvoiceDate = DateTime.MinValue,
+        CustomerAddress = string.Empty,
+        DeliveryDate = DateTime.MinValue,
+        PayableBy = DateTime.MinValue,
         Products =
-            new List<InvoiceDataProduct> { new() { Id = string.Empty, UnitPrice = 0.0, Quantity = 0.0, Total = 0.0 } },
+            new List<InvoiceDataProduct>
+            {
+                new()
+                {
+                    Id = string.Empty,
+                    Description = string.Empty,
+                    UnitPrice = 0.0,
+                    Quantity = 0.0,
+                    Total = 0.0
+                }
+            },
+        Returns =
+            new List<InvoiceDataProduct> { new() { Id = string.Empty, Quantity = 0.0, Reason = string.Empty } },
         TotalQuantity = 0,
         TotalPrice = 0,
-        Signatures = new List<InvoiceDataSignature>
-        {
-            new()
+        ProductsSignatures =
+            new List<InvoiceDataSignature>
             {
-                Type = "Distributor",
-                SignedOn = DateTime.MinValue
-            }
+                new() { Type = "Customer", Name = string.Empty, IsSigned = false },
+                new() { Type = "Driver", Name = string.Empty, IsSigned = false }
+            },
+        ReturnsSignatures = new List<InvoiceDataSignature>
+        {
+            new() { Type = string.Empty, Name = string.Empty, IsSigned = false }
         }
     };
 
@@ -39,18 +70,23 @@ public class InvoiceData
     {
         public string? Id { get; set; }
 
+        public string? Description { get; set; }
+
         public double? UnitPrice { get; set; }
 
         public double Quantity { get; set; }
 
         public double? Total { get; set; }
+
+        public string? Reason { get; set; }
     }
 
     public class InvoiceDataSignature
     {
         public string? Type { get; set; }
 
-        [JsonConverter(typeof(UtcDateTimeConverter))]
-        public DateTime? SignedOn { get; set; }
+        public string? Name { get; set; }
+
+        public bool? IsSigned { get; set; }
     }
 }

@@ -42,44 +42,32 @@ public class ValidateInvoiceData()
                 LogLevel.Error);
         }
 
-        if (data.Signatures == null)
+        ValidateInvoiceProducts(data, result, logger);
+        ValidateInvoiceProductSignatures(data, result, logger);
+
+        ValidateInvoiceReturns(data, result, logger);
+        ValidateInvoiceReturnSignatures(data, result, logger);
+
+        if (result.IsValid)
         {
-            result.Status |= ResultStatus.DistributorSignatureMissing | ResultStatus.CustomerSignatureMissing;
+            result.Status = ResultStatus.Success;
+        }
+
+        return Task.FromResult(result);
+    }
+
+    private static void ValidateInvoiceProducts(InvoiceData data, Result result, ILogger logger)
+    {
+        if (data.Products == null)
+        {
+            result.Status |= ResultStatus.ProductsMissing;
             result.AddError(
                 Name,
-                $"{nameof(data.Signatures)} is required.",
+                $"{nameof(data.Products)} is required.",
                 logger,
                 LogLevel.Error);
         }
-
-        if (data.Signatures != null)
-        {
-            var distributorSignature = GetSignature(data.Signatures, "Distributor");
-            if (distributorSignature?.SignedOn == null ||
-                distributorSignature.SignedOn.Value == DateTime.MinValue)
-            {
-                result.Status |= ResultStatus.DistributorSignatureMissing;
-                result.AddError(
-                    Name,
-                    $"{nameof(data.Signatures)} must contain a distributor signature.",
-                    logger,
-                    LogLevel.Error);
-            }
-
-            var customerSignature = GetSignature(data.Signatures, "Customer");
-            if (customerSignature?.SignedOn == null ||
-                customerSignature.SignedOn.Value == DateTime.MinValue)
-            {
-                result.Status |= ResultStatus.CustomerSignatureMissing;
-                result.AddError(
-                    Name,
-                    $"{nameof(data.Signatures)} must contain a customer signature.",
-                    logger,
-                    LogLevel.Error);
-            }
-        }
-
-        if (data.Products != null)
+        else
         {
             if (!data.Products.Sum(x => x.Quantity).Equals(data.TotalQuantity))
             {
@@ -101,13 +89,95 @@ public class ValidateInvoiceData()
                     LogLevel.Error);
             }
         }
+    }
 
-        if (result.IsValid)
+    private static void ValidateInvoiceProductSignatures(InvoiceData data, Result result, ILogger logger)
+    {
+        if (data.ProductsSignatures == null)
         {
-            result.Status = ResultStatus.Success;
+            result.Status |= ResultStatus.ProductsDriverSignatureMissing |
+                             ResultStatus.ProductsCustomerSignatureMissing;
+            result.AddError(
+                Name,
+                $"{nameof(data.ProductsSignatures)} is required.",
+                logger,
+                LogLevel.Error);
+        }
+        else
+        {
+            var driverSignature = GetSignature(data.ProductsSignatures, "Driver");
+            if (driverSignature is null)
+            {
+                result.Status |= ResultStatus.ProductsDriverSignatureMissing;
+                result.AddError(
+                    Name,
+                    $"{nameof(data.ProductsSignatures)} must contain a driver signature.",
+                    logger,
+                    LogLevel.Error);
+            }
+
+            var customerSignature = GetSignature(data.ProductsSignatures, "Customer");
+            if (customerSignature is null)
+            {
+                result.Status |= ResultStatus.ProductsCustomerSignatureMissing;
+                result.AddError(
+                    Name,
+                    $"{nameof(data.ProductsSignatures)} must contain a customer signature.",
+                    logger,
+                    LogLevel.Error);
+            }
+        }
+    }
+
+    private static void ValidateInvoiceReturns(InvoiceData data, Result result, ILogger logger)
+    {
+        if (data.Returns == null)
+        {
+            return;
         }
 
-        return Task.FromResult(result);
+        foreach (var productReturn in data.Returns)
+        {
+            if (string.IsNullOrWhiteSpace(productReturn.Reason))
+            {
+                result.Status |= ResultStatus.ReturnReasonMissing;
+                result.AddError(
+                    Name,
+                    $"{productReturn.Id} must contain a reason.",
+                    logger,
+                    LogLevel.Error);
+            }
+        }
+    }
+
+    private static void ValidateInvoiceReturnSignatures(InvoiceData data, Result result, ILogger logger)
+    {
+        if (data.ReturnsSignatures == null)
+        {
+            return;
+        }
+
+        var driverSignature = GetSignature(data.ReturnsSignatures, "Driver");
+        if (driverSignature is null || string.IsNullOrWhiteSpace(driverSignature.Name))
+        {
+            result.Status |= ResultStatus.ReturnsDriverSignatureMissing;
+            result.AddError(
+                Name,
+                $"{nameof(data.ReturnsSignatures)} must contain a driver signature.",
+                logger,
+                LogLevel.Error);
+        }
+
+        var customerSignature = GetSignature(data.ReturnsSignatures, "Customer");
+        if (customerSignature is null || string.IsNullOrWhiteSpace(customerSignature.Name))
+        {
+            result.Status |= ResultStatus.ReturnsCustomerSignatureMissing;
+            result.AddError(
+                Name,
+                $"{nameof(data.ReturnsSignatures)} must contain a customer signature.",
+                logger,
+                LogLevel.Error);
+        }
     }
 
     private static InvoiceData.InvoiceDataSignature? GetSignature(
@@ -155,11 +225,15 @@ public class ValidateInvoiceData()
     public enum ResultStatus
     {
         Unknown = 0,
-        DistributorSignatureMissing = 1,
-        CustomerSignatureMissing = 2,
-        CustomerNameMissing = 3,
-        ProductsTotalQuantityInvalid = 4,
-        ProductsTotalPriceInvalid = 5,
-        Success = 6
+        Success = 1,
+        ProductsDriverSignatureMissing = 2,
+        ProductsCustomerSignatureMissing = 3,
+        CustomerNameMissing = 4,
+        ProductsTotalQuantityInvalid = 5,
+        ProductsTotalPriceInvalid = 6,
+        ProductsMissing = 7,
+        ReturnReasonMissing = 8,
+        ReturnsDriverSignatureMissing = 9,
+        ReturnsCustomerSignatureMissing = 10
     }
 }

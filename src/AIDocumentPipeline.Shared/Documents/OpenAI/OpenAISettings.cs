@@ -51,7 +51,7 @@ public class OpenAISettings(
     public string? CompletionDeploymentName { get; init; } = completionDeploymentName;
 
     /// <summary>
-    /// Gets the name of the deployment for a vision completion model, e.g., gpt-4-vision-preview.
+    /// Gets the name of the deployment for a vision completion model, e.g., gpt-4.
     /// </summary>
     public string? VisionCompletionDeploymentName { get; init; } = visionCompletionDeploymentName;
 

@@ -3,6 +3,7 @@ using AIDocumentPipeline.Shared.Documents;
 using AIDocumentPipeline.Shared.Documents.OpenAI;
 using AIDocumentPipeline.Shared.Observability;
 using AIDocumentPipeline.Shared.Storage;
+using Azure.AI.OpenAI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -26,7 +27,8 @@ var host = new HostBuilder()
         services.AddDocumentIntelligenceMarkdownConverter(builder.Configuration);
         services.AddOpenAIDocumentDataExtractor(options =>
         {
-            options.DeploymentName = builder.Configuration[OpenAISettings.CompletionModelDeploymentConfigKey];
+            options.DeploymentName = builder.Configuration[OpenAISettings.VisionCompletionModelDeploymentConfigKey];
+            options.ResponseFormat = ChatCompletionsResponseFormat.JsonObject;
         }, builder.Configuration);
 
         services.TryAddSingleton(_ => InvoicesSettings.FromConfiguration(builder.Configuration));

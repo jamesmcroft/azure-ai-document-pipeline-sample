@@ -59,6 +59,18 @@ public class ExtractInvoiceDataWorkflow(
                 continue;
             }
 
+            await CallActivityAsync<bool>(
+                context,
+                WriteBytesToBlob.Name,
+                new WriteBytesToBlob.Request
+                {
+                    StorageAccountName = settings.InvoicesStorageAccountName,
+                    ContainerName = input.Container!,
+                    BlobName = $"{invoice}.Markdown.md",
+                    Content = invoiceMarkdown
+                },
+                span.Context);
+
             var invoiceData = await CallActivityAsync<InvoiceData?>(
                 context,
                 ExtractInvoiceData.Name,
@@ -82,7 +94,7 @@ public class ExtractInvoiceDataWorkflow(
                 {
                     StorageAccountName = settings.InvoicesStorageAccountName,
                     ContainerName = input.Container!,
-                    BlobName = $"{invoice}.ExtractedData.json",
+                    BlobName = $"{invoice}.Data.json",
                     Content = JsonSerializer.SerializeToUtf8Bytes(invoiceData)
                 },
                 span.Context);
@@ -104,6 +116,18 @@ public class ExtractInvoiceDataWorkflow(
                 span.Context);
 
             result.Merge(invoiceDataValidation);
+
+            await CallActivityAsync<bool>(
+                context,
+                WriteBytesToBlob.Name,
+                new WriteBytesToBlob.Request
+                {
+                    StorageAccountName = settings.InvoicesStorageAccountName,
+                    ContainerName = input.Container!,
+                    BlobName = $"{invoice}.Validation.json",
+                    Content = JsonSerializer.SerializeToUtf8Bytes(invoiceDataValidation)
+                },
+                span.Context);
         }
 
         return result;
