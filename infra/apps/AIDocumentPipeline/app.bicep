@@ -18,12 +18,12 @@ param containerImageName string
 @description('Primary location for the deployed Document Intelligence service. Default is westeurope for latest preview support.')
 param documentIntelligenceLocation string = 'westeurope'
 
-@description('Location of the Azure OpenAI service for the application. Default is francecentral.')
-param openAILocation string = 'francecentral'
+@description('Location of the Azure OpenAI service for the application. Default is swedencentral.')
+param openAILocation string = 'swedencentral'
 @description('Name of the Azure OpenAI completion model for the application. Default is gpt-35-turbo.')
 param openAICompletionModelName string = 'gpt-35-turbo'
-@description('Name of the Azure OpenAI vision completion model for the application. Default is gpt-4-vision-preview.')
-param openAIVisionCompletionModelName string = 'gpt-4-vision-preview'
+@description('Name of the Azure OpenAI vision completion model for the application. Default is gpt-4.')
+param openAIVisionCompletionModelName string = 'gpt-4'
 @description('Name of the Azure OpenAI embedding model for the application. Default is text-embedding-ada-002.')
 param openAIEmbeddingModelName string = 'text-embedding-ada-002'
 

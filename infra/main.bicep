@@ -17,8 +17,8 @@ param tags object = {}
 
 @description('Primary location for the Document Intelligence service. Default is westeurope for latest preview support.')
 param documentIntelligenceLocation string = 'westeurope'
-@description('Primary location for the OpenAI service. Default is francecentral for latest preview support.')
-param openAILocation string = 'francecentral'
+@description('Primary location for the OpenAI service. Default is swedencentral for latest preview support.')
+param openAILocation string = 'swedencentral'
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var roles = loadJsonContent('./roles.json')
@@ -118,6 +118,7 @@ resource cognitiveServicesOpenAIUser 'Microsoft.Authorization/roleDefinitions@20
   name: roles.ai.cognitiveServicesOpenAIUser
 }
 
+var visionCompletionModelDeploymentName = 'gpt-4'
 var completionModelDeploymentName = 'gpt-35-turbo'
 
 module openAI './ai_ml/openai.bicep' = {
@@ -129,15 +130,27 @@ module openAI './ai_ml/openai.bicep' = {
     tags: union(tags, {})
     deployments: [
       {
+        name: visionCompletionModelDeploymentName
+        model: {
+          format: 'OpenAI'
+          name: 'gpt-4'
+          version: 'turbo-2024-04-09'
+        }
+        sku: {
+          name: 'Standard'
+          capacity: 80
+        }
+      }
+      {
         name: completionModelDeploymentName
         model: {
           format: 'OpenAI'
-          name: 'gpt-35-turbo'
+          name: 'gpt-3.5-turbo'
           version: '1106'
         }
         sku: {
           name: 'Standard'
-          capacity: 30
+          capacity: 80
         }
       }
     ]
@@ -279,6 +292,7 @@ output openAIInfo object = {
   name: openAI.outputs.name
   endpoint: openAI.outputs.endpoint
   host: openAI.outputs.host
+  visionCompletionModelDeploymentName: visionCompletionModelDeploymentName
   completionModelDeploymentName: completionModelDeploymentName
 }
 

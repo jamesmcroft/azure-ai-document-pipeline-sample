@@ -45,6 +45,7 @@ else {
 if ($IsLocal -eq '$true') {
     $OpenAIEndpoint = $InfrastructureOutputs.openAIInfo.value.endpoint
     $OpenAICompletionDeployment = $InfrastructureOutputs.openAIInfo.value.completionModelDeploymentName
+    $OpenAIVisionCompletionDeployment = $InfrastructureOutputs.openAIInfo.value.visionCompletionModelDeploymentName
     $DocumentIntelligenceEndpoint = $InfrastructureOutputs.documentIntelligenceInfo.value.endpoint
     $StorageAccountName = $InfrastructureOutputs.storageAccountInfo.value.name
 
@@ -54,6 +55,7 @@ if ($IsLocal -eq '$true') {
     $LocalSettings = Get-Content -Path $LocalSettingsPath -Raw | ConvertFrom-Json
     $LocalSettings.Values.OPENAI_ENDPOINT = $OpenAIEndpoint
     $LocalSettings.Values.OPENAI_COMPLETION_DEPLOYMENT = $OpenAICompletionDeployment
+    $LocalSettings.Values.OPENAI_VISION_COMPLETION_DEPLOYMENT = $OpenAIVisionCompletionDeployment
     $LocalSettings.Values.DOCUMENT_INTELLIGENCE_ENDPOINT = $DocumentIntelligenceEndpoint
     $LocalSettings.Values.INVOICES_STORAGE_ACCOUNT_NAME = $StorageAccountName
     $LocalSettings | ConvertTo-Json | Out-File -FilePath $LocalSettingsPath -Encoding utf8
