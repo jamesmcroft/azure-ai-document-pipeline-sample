@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using Azure.AI.OpenAI;
 using Microsoft.Extensions.Logging;
@@ -7,22 +8,36 @@ using Microsoft.Extensions.Options;
 namespace AIDocumentPipeline.Shared.Documents.OpenAI;
 
 /// <summary>
-/// Defines a document data extractor that uses the Azure OpenAI service.
+/// Defines a document data extractor that combines Azure AI Document Intelligence and Azure OpenAI to extract structured data from Markdown documents.
 /// </summary>
 /// <param name="client">The Azure OpenAI client.</param>
+/// <param name="markdownConverter">The document converter that converts documents to Markdown.</param>
 /// <param name="options">The configuration options for the Azure OpenAI document data extraction service.</param>
 /// <param name="logger">The observer for logging messages.</param>
-public class OpenAIDocumentDataExtractor(
+public class OpenAIMarkdownDocumentDataExtractor(
     OpenAIClient client,
+    IDocumentMarkdownConverter markdownConverter,
     IOptions<OpenAIDocumentDataExtractionOptions> options,
-    ILogger<OpenAIDocumentDataExtractor> logger)
+    ILogger<OpenAIMarkdownDocumentDataExtractor> logger)
     : IDocumentDataExtractor
 {
     private const string ExtractDataPromptFormat =
         "Extract the data from this document. If a value is not present, provide null. Use the following JSON schema: {0}";
 
-    /// <inheritdoc />
-    public async Task<T?> FromContentAsync<T>(
+    public async Task<T?> FromByteArrayAsync<T>(byte[] documentBytes, T schemaObject, CancellationToken cancellationToken = default) where T : class
+    {
+        var markdownContent = await markdownConverter.FromByteArrayAsync(documentBytes, cancellationToken);
+
+        if (markdownContent != null)
+        {
+            return await FromContentAsync(Encoding.UTF8.GetString(markdownContent), schemaObject, cancellationToken);
+        }
+
+        logger.LogWarning("No Markdown content was returned from the document.");
+        return default;
+    }
+
+    private async Task<T?> FromContentAsync<T>(
         string documentContent,
         T schemaObject,
         CancellationToken cancellationToken = default)

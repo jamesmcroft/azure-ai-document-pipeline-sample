@@ -1,7 +1,7 @@
-using System.Text;
 using AIDocumentPipeline.Shared;
 using AIDocumentPipeline.Shared.Documents;
 using AIDocumentPipeline.Shared.Observability;
+using AIDocumentPipeline.Shared.Storage;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
@@ -9,7 +9,9 @@ namespace AIDocumentPipeline.Invoices.Activities;
 
 [ActivitySource]
 public class ExtractInvoiceData(
-    IDocumentDataExtractor documentDataExtractor)
+    IDocumentDataExtractor documentDataExtractor,
+    AzureStorageClientFactory storageClientFactory,
+    InvoicesSettings settings)
     : BaseActivity(Name)
 {
     public const string Name = nameof(ExtractInvoiceData);
@@ -29,22 +31,34 @@ public class ExtractInvoiceData(
             return null;
         }
 
-        return await documentDataExtractor.FromContentAsync(
-            Encoding.UTF8.GetString(input.Markdown!),
+        await using var blobContentStream = await storageClientFactory.GetBlobContentAsync(
+            settings.InvoicesStorageAccountName,
+            input.Container!,
+            input.FileName!);
+
+        return await documentDataExtractor.FromByteArrayAsync(
+            blobContentStream.ToArray(),
             InvoiceData.Empty);
     }
 
     public class Request : BaseWorkflowRequest
     {
-        public byte[]? Markdown { get; set; }
+        public string? Container { get; set; }
+
+        public string? FileName { get; set; }
 
         public override ValidationResult Validate()
         {
             var result = new ValidationResult();
 
-            if (Markdown is null || Markdown.Length == 0)
+            if (string.IsNullOrWhiteSpace(Container))
             {
-                result.AddError($"{nameof(Markdown)} is required.");
+                result.AddError($"{nameof(Container)} is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(FileName))
+            {
+                result.AddError($"{nameof(FileName)} is required.");
             }
 
             return result;

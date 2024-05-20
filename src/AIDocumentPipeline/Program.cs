@@ -24,11 +24,16 @@ var host = new HostBuilder()
             builder.HostingEnvironment.IsDevelopment());
 
         services.AddAzureBlobStorage(builder.Configuration);
-        services.AddDocumentIntelligenceMarkdownConverter(builder.Configuration);
-        services.AddOpenAIDocumentDataExtractor(options =>
+
+        //services.AddOpenAIMarkdownDocumentDataExtractor(options =>
+        //{
+        //    options.DeploymentName = builder.Configuration[OpenAISettings.CompletionModelDeploymentConfigKey];
+        //    //options.ResponseFormat = ChatCompletionsResponseFormat.JsonObject; // Enable when using the OpenAISettings.VisionCompletionModelDeploymentConfigKey
+        //}, builder.Configuration);
+
+        services.AddOpenAIVisionDocumentDataExtractor(options =>
         {
             options.DeploymentName = builder.Configuration[OpenAISettings.VisionCompletionModelDeploymentConfigKey];
-            options.ResponseFormat = ChatCompletionsResponseFormat.JsonObject;
         }, builder.Configuration);
 
         services.TryAddSingleton(_ => InvoicesSettings.FromConfiguration(builder.Configuration));

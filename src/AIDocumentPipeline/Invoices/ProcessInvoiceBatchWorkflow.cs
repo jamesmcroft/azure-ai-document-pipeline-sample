@@ -1,6 +1,7 @@
 using AIDocumentPipeline.Invoices.Activities;
 using AIDocumentPipeline.Shared;
 using AIDocumentPipeline.Shared.Observability;
+using AIDocumentPipeline.Workflows;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask;
@@ -63,6 +64,8 @@ public class ProcessInvoiceBatchWorkflow()
             span.Context);
 
         logger.LogInformation("Started workflow with instance ID: {InstanceId}", instanceId);
+        logger.LogInformation("Check status response: {CheckStatusResponse}",
+            WorkflowStatusFunctions.GetInstanceUrl(instanceId));
     }
 
     [Function(Name)]

@@ -16,63 +16,66 @@ namespace AIDocumentPipeline.Shared.Documents;
 public static class DocumentDependencyExtensions
 {
     /// <summary>
-    /// Adds a Document Intelligence Markdown converter to the service collection.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
-    /// <param name="configuration">The application configuration to retrieve settings from.</param>
-    /// <returns>The updated service collection.</returns>
-    public static IServiceCollection AddDocumentIntelligenceMarkdownConverter(
-        this IServiceCollection services,
-        IConfiguration configuration)
-    {
-        services.AddAzureCredential(configuration);
-
-        var settings = DocumentIntelligenceSettings.FromConfiguration(configuration);
-        services.TryAddSingleton(_ => settings);
-
-        services.TryAddSingleton(sp =>
-        {
-            var endpoint = sp.GetRequiredService<IConfiguration>()
-                               .GetValue<string>(DocumentIntelligenceSettings.EndpointConfigKey) ??
-                           throw new InvalidOperationException(
-                               $"{DocumentIntelligenceSettings.EndpointConfigKey} is not configured.");
-
-            var credentials = sp.GetRequiredService<DefaultAzureCredential>();
-            return new DocumentIntelligenceClient(new Uri(endpoint), credentials);
-        });
-
-        services.TryAddSingleton<IDocumentMarkdownConverter, DocumentIntelligenceMarkdownConverter>();
-
-        return services;
-    }
-
-    /// <summary>
     /// Adds an Azure OpenAI document data extractor to the service collection.
     /// </summary>
     /// <param name="services">The service collection to configure.</param>
     /// <param name="options">The configuration options for the Azure OpenAI document data extractor.</param>
     /// <param name="configuration">The application configuration to retrieve settings from.</param>
     /// <returns>The updated service collection.</returns>
-    public static IServiceCollection AddOpenAIDocumentDataExtractor(
+    public static IServiceCollection AddOpenAIMarkdownDocumentDataExtractor(
         this IServiceCollection services,
         Action<OpenAIDocumentDataExtractionOptions> options,
         IConfiguration configuration)
     {
         services.AddAzureCredential(configuration);
 
-        var settings = OpenAISettings.FromConfiguration(configuration);
-        services.TryAddSingleton(_ => settings);
+        var diSettings = DocumentIntelligenceSettings.FromConfiguration(configuration);
+        services.TryAddSingleton(_ => diSettings);
+
+        var oaiSettings = OpenAISettings.FromConfiguration(configuration);
+        services.TryAddSingleton(_ => oaiSettings);
 
         services.TryAddSingleton(sp =>
         {
             var credentials = sp.GetRequiredService<DefaultAzureCredential>();
-            return new OpenAIClient(new Uri(settings.Endpoint), credentials);
+            return new DocumentIntelligenceClient(new Uri(diSettings.Endpoint), credentials);
+        });
+
+        services.TryAddSingleton(sp =>
+        {
+            var credentials = sp.GetRequiredService<DefaultAzureCredential>();
+            return new OpenAIClient(new Uri(oaiSettings.Endpoint), credentials);
         });
 
         services.Configure(options);
 
-        services.TryAddSingleton<IDocumentDataExtractor, OpenAIDocumentDataExtractor>();
+        services.TryAddSingleton<IDocumentMarkdownConverter, DocumentIntelligenceMarkdownConverter>();
+        services.TryAddSingleton<IDocumentDataExtractor, OpenAIMarkdownDocumentDataExtractor>();
 
         return services;
+    }
+
+    public static IServiceCollection AddOpenAIVisionDocumentDataExtractor(
+        this IServiceCollection services,
+        Action<OpenAIDocumentDataExtractionOptions> options,
+        IConfiguration configuration)
+    {
+        services.AddAzureCredential(configuration);
+
+        var oaiSettings = OpenAISettings.FromConfiguration(configuration);
+        services.TryAddSingleton(_ => oaiSettings);
+
+        services.TryAddSingleton(sp =>
+        {
+            var credentials = sp.GetRequiredService<DefaultAzureCredential>();
+            return new OpenAIClient(new Uri(oaiSettings.Endpoint), credentials);
+        });
+
+        services.Configure(options);
+
+        services.TryAddSingleton<IDocumentDataExtractor, OpenAIVisionDocumentDataExtractor>();
+
+        return services;
+
     }
 }

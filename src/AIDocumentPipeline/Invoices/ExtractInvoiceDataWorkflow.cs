@@ -43,38 +43,10 @@ public class ExtractInvoiceDataWorkflow(
         // Step 3: Process each invoice file.
         foreach (var invoice in input.InvoiceFileNames)
         {
-            var invoiceMarkdown = await CallActivityAsync<byte[]?>(
-                context,
-                GetInvoiceMarkdown.Name,
-                new GetInvoiceMarkdown.Request { Container = input.Container, FileName = invoice },
-                span.Context);
-
-            if (invoiceMarkdown is null)
-            {
-                result.AddError(
-                    GetInvoiceMarkdown.Name,
-                    $"Failed to get the markdown for {invoice}.",
-                    logger,
-                    LogLevel.Error);
-                continue;
-            }
-
-            await CallActivityAsync<bool>(
-                context,
-                WriteBytesToBlob.Name,
-                new WriteBytesToBlob.Request
-                {
-                    StorageAccountName = settings.InvoicesStorageAccountName,
-                    ContainerName = input.Container!,
-                    BlobName = $"{invoice}.Markdown.md",
-                    Content = invoiceMarkdown
-                },
-                span.Context);
-
             var invoiceData = await CallActivityAsync<InvoiceData?>(
                 context,
                 ExtractInvoiceData.Name,
-                new ExtractInvoiceData.Request { Markdown = invoiceMarkdown },
+                new ExtractInvoiceData.Request { Container = input.Container, FileName = invoice },
                 span.Context);
 
             if (invoiceData is null)

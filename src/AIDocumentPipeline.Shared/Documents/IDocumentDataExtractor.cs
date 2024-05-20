@@ -6,18 +6,18 @@ namespace AIDocumentPipeline.Shared.Documents;
 public interface IDocumentDataExtractor
 {
     /// <summary>
-    /// Extracts data from the specified document content.
+    /// Extracts data from the specified document content as a byte array.
     /// </summary>
     /// <remarks>
     /// Ideally, the schema object should be an empty class instance of the expected data structure.
     /// </remarks>
     /// <typeparam name="T">The type of data to extract.</typeparam>
-    /// <param name="documentContent">The content of the document to extract data from.</param>
+    /// <param name="documentBytes">The content of the document to extract data from as a byte array.</param>
     /// <param name="schemaObject">The object that will be used as the schema to extract the data.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The extracted data, or <see langword="null"/> if the data could not be extracted.</returns>
-    Task<T?> FromContentAsync<T>(
-        string documentContent,
+    Task<T?> FromByteArrayAsync<T>(
+        byte[] documentBytes,
         T schemaObject,
         CancellationToken cancellationToken = default)
         where T : class;
