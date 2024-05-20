@@ -62,6 +62,7 @@ module keyVault './security/key-vault.bicep' = {
       {
         principalId: managedIdentity.outputs.principalId
         roleDefinitionId: keyVaultSecretsOfficer.id
+        principalType: 'ServicePrincipal'
       }
     ]
   }
@@ -87,6 +88,7 @@ module containerRegistry 'containers/container-registry.bicep' = {
       {
         principalId: managedIdentity.outputs.principalId
         roleDefinitionId: containerRegistryPull.id
+        principalType: 'ServicePrincipal'
       }
     ]
   }
@@ -108,6 +110,7 @@ module documentIntelligence './ai_ml/document-intelligence.bicep' = {
       {
         principalId: managedIdentity.outputs.principalId
         roleDefinitionId: cognitiveServicesUser.id
+        principalType: 'ServicePrincipal'
       }
     ]
   }
@@ -145,7 +148,7 @@ module openAI './ai_ml/openai.bicep' = {
         name: completionModelDeploymentName
         model: {
           format: 'OpenAI'
-          name: 'gpt-3.5-turbo'
+          name: 'gpt-35-turbo'
           version: '1106'
         }
         sku: {
@@ -158,6 +161,7 @@ module openAI './ai_ml/openai.bicep' = {
       {
         principalId: managedIdentity.outputs.principalId
         roleDefinitionId: cognitiveServicesOpenAIUser.id
+        principalType: 'ServicePrincipal'
       }
     ]
   }
@@ -192,6 +196,11 @@ resource storageAccountContributor 'Microsoft.Authorization/roleDefinitions@2022
   name: roles.storage.storageAccountContributor
 }
 
+resource storageBlobDataContributor 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  scope: resourceGroup
+  name: roles.storage.storageBlobDataContributor
+}
+
 resource storageBlobDataOwner 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   scope: resourceGroup
   name: roles.storage.storageBlobDataOwner
@@ -221,18 +230,27 @@ module storageAccount './storage/storage-account.bicep' = {
       {
         principalId: managedIdentity.outputs.principalId
         roleDefinitionId: storageAccountContributor.id
+        principalType: 'ServicePrincipal'
       }
       {
         principalId: managedIdentity.outputs.principalId
         roleDefinitionId: storageBlobDataOwner.id
+        principalType: 'ServicePrincipal'
       }
       {
         principalId: managedIdentity.outputs.principalId
         roleDefinitionId: storageQueueDataContributor.id
+        principalType: 'ServicePrincipal'
       }
       {
         principalId: managedIdentity.outputs.principalId
         roleDefinitionId: storageTableDataContributor.id
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: documentIntelligence.outputs.systemIdentityPrincipalId
+        roleDefinitionId: storageBlobDataContributor.id
+        principalType: 'ServicePrincipal'
       }
     ]
   }
@@ -285,6 +303,7 @@ output documentIntelligenceInfo object = {
   name: documentIntelligence.outputs.name
   endpoint: documentIntelligence.outputs.endpoint
   host: documentIntelligence.outputs.host
+  identityPrincipalId: documentIntelligence.outputs.systemIdentityPrincipalId
 }
 
 output openAIInfo object = {
