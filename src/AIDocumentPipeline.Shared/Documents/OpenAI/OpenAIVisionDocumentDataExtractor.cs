@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using Azure.AI.OpenAI;
 using Microsoft.Extensions.Logging;
@@ -16,10 +15,11 @@ public class OpenAIVisionDocumentDataExtractor(
     ILogger<OpenAIVisionDocumentDataExtractor> logger)
     : IDocumentDataExtractor
 {
-    private const string ExtractDataPromptFormat =
-        "Extract the data from this document. If a value is not present, provide null. Use the following JSON schema: {0}";
-
-    public async Task<T?> FromByteArrayAsync<T>(byte[] documentBytes, T schemaObject,
+    /// <inheritdoc />
+    public async Task<T?> FromByteArrayAsync<T>(
+        byte[] documentBytes,
+        T schemaObject,
+        Func<T, string> extractionPromptConstruct,
         CancellationToken cancellationToken = default) where T : class
     {
         var pageImages = ToProcessedImages(documentBytes);
@@ -32,9 +32,7 @@ public class OpenAIVisionDocumentDataExtractor(
 
                 AddSystemPrompt(options.Value.SystemPrompt, chatOptions.Messages);
 
-                var extractionMessage = string.Format(CultureInfo.InvariantCulture, ExtractDataPromptFormat,
-                    JsonSerializer.Serialize(schemaObject));
-                AddVisionPrompt(extractionMessage, pageImages, chatOptions.Messages);
+                AddVisionPrompt(extractionPromptConstruct(schemaObject), pageImages, chatOptions.Messages);
 
                 var response = await client.GetChatCompletionsAsync(chatOptions, cancellationToken);
 
@@ -89,6 +87,7 @@ public class OpenAIVisionDocumentDataExtractor(
         {
             var totalHeight = pageImageGroup.Sum(image => image.Height);
             var width = pageImageGroup.Max(image => image.Width);
+
             var stitchedImage = new SKBitmap(width, totalHeight);
             var canvas = new SKCanvas(stitchedImage);
             var currentHeight = 0;
@@ -97,6 +96,8 @@ public class OpenAIVisionDocumentDataExtractor(
                 canvas.DrawBitmap(pageImage, 0, currentHeight);
                 currentHeight += pageImage.Height;
             }
+
+            //stitchedImage = stitchedImage.Resize(new SKImageInfo(width * 2, totalHeight * 2), SKFilterQuality.High);
 
             var stitchedImageStream = new MemoryStream();
             stitchedImage.Encode(stitchedImageStream, SKEncodedImageFormat.Jpeg, 100);

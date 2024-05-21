@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Azure.AI.OpenAI;
@@ -21,16 +20,18 @@ public class OpenAIMarkdownDocumentDataExtractor(
     ILogger<OpenAIMarkdownDocumentDataExtractor> logger)
     : IDocumentDataExtractor
 {
-    private const string ExtractDataPromptFormat =
-        "Extract the data from this document. If a value is not present, provide null. Use the following JSON schema: {0}";
-
-    public async Task<T?> FromByteArrayAsync<T>(byte[] documentBytes, T schemaObject, CancellationToken cancellationToken = default) where T : class
+    /// <inheritdoc />
+    public async Task<T?> FromByteArrayAsync<T>(
+        byte[] documentBytes,
+        T schemaObject,
+        Func<T, string> extractionPromptConstruct,
+        CancellationToken cancellationToken = default) where T : class
     {
         var markdownContent = await markdownConverter.FromByteArrayAsync(documentBytes, cancellationToken);
 
         if (markdownContent != null)
         {
-            return await FromContentAsync(Encoding.UTF8.GetString(markdownContent), schemaObject, cancellationToken);
+            return await FromContentAsync<T>(Encoding.UTF8.GetString(markdownContent), extractionPromptConstruct(schemaObject), cancellationToken);
         }
 
         logger.LogWarning("No Markdown content was returned from the document.");
@@ -39,7 +40,7 @@ public class OpenAIMarkdownDocumentDataExtractor(
 
     private async Task<T?> FromContentAsync<T>(
         string documentContent,
-        T schemaObject,
+        string extractionPrompt,
         CancellationToken cancellationToken = default)
         where T : class
     {
@@ -49,8 +50,7 @@ public class OpenAIMarkdownDocumentDataExtractor(
 
             AddSystemPrompt(options.Value.SystemPrompt, chatOptions.Messages);
 
-            var extractionMessage = string.Format(CultureInfo.InvariantCulture, ExtractDataPromptFormat, JsonSerializer.Serialize(schemaObject));
-            AddUserPrompt(extractionMessage, chatOptions.Messages);
+            AddUserPrompt(extractionPrompt, chatOptions.Messages);
             AddUserPrompt(documentContent, chatOptions.Messages);
 
             var response = await client.GetChatCompletionsAsync(chatOptions, cancellationToken);

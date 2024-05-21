@@ -12,6 +12,13 @@ namespace AIDocumentPipeline.Shared;
 [ActivitySource]
 public abstract class BaseWorkflow(string name)
 {
+    // The retry policy ensures that the workflow retries activity execution up to 5 times, making the first retry after 5 seconds, with subsequent retries increasing exponentially.
+    private readonly TaskOptions _retryPolicy = TaskOptions.FromRetryPolicy(
+        new RetryPolicy(
+            maxNumberOfAttempts: 5,
+            firstRetryInterval: TimeSpan.FromSeconds(5),
+            backoffCoefficient: 1.5));
+
     /// <summary>
     /// Defines the tracer for the workflow.
     /// </summary>
@@ -59,7 +66,7 @@ public abstract class BaseWorkflow(string name)
             input.InjectObservabilityContext(spanContext);
         }
 
-        return workflowContext.CallSubOrchestratorAsync<T>(subWorkflowName, input);
+        return workflowContext.CallSubOrchestratorAsync<T>(subWorkflowName, input, _retryPolicy);
     }
 
     /// <summary>
@@ -81,7 +88,7 @@ public abstract class BaseWorkflow(string name)
             input.InjectObservabilityContext(spanContext);
         }
 
-        return workflowContext.CallActivityAsync(activityName, input);
+        return workflowContext.CallActivityAsync(activityName, input, _retryPolicy);
     }
 
     /// <summary>
@@ -104,7 +111,7 @@ public abstract class BaseWorkflow(string name)
             input.InjectObservabilityContext(spanContext);
         }
 
-        return workflowContext.CallActivityAsync<T>(activityName, input);
+        return workflowContext.CallActivityAsync<T>(activityName, input, _retryPolicy);
     }
 
     /// <summary>

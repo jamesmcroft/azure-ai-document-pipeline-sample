@@ -14,11 +14,13 @@ public interface IDocumentDataExtractor
     /// <typeparam name="T">The type of data to extract.</typeparam>
     /// <param name="documentBytes">The content of the document to extract data from as a byte array.</param>
     /// <param name="schemaObject">The object that will be used as the schema to extract the data.</param>
+    /// <param name="extractionPromptConstruct">The function that constructs the extraction prompt from the schema object.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The extracted data, or <see langword="null"/> if the data could not be extracted.</returns>
     Task<T?> FromByteArrayAsync<T>(
         byte[] documentBytes,
         T schemaObject,
+        Func<T, string> extractionPromptConstruct,
         CancellationToken cancellationToken = default)
         where T : class;
 }
