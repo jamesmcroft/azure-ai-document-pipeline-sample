@@ -13,12 +13,17 @@ param location string
 param resourceGroupName string = ''
 
 @description('Tags for all resources.')
-param tags object = {}
+param tags object = {
+  WorkloadName: workloadName
+  Environment: 'Dev'
+}
 
 @description('Primary location for the Document Intelligence service. Default is westeurope for latest preview support.')
 param documentIntelligenceLocation string = 'westeurope'
 @description('Primary location for the OpenAI service. Default is swedencentral for latest preview support.')
 param openAILocation string = 'swedencentral'
+@description('Primary location for the OpenAI GPT-4 omni deployment. Default is West US 3')
+param openAIPreviewLocation string = 'westus3'
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var roles = loadJsonContent('./roles.json')
@@ -29,6 +34,7 @@ var documentIntelligenceResourceToken = toLower(uniqueString(
   documentIntelligenceLocation
 ))
 var openAIResourceToken = toLower(uniqueString(subscription().id, workloadName, openAILocation))
+var openAIPreviewResourceToken = toLower(uniqueString(subscription().id, workloadName, openAIPreviewLocation))
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   name: !empty(resourceGroupName) ? resourceGroupName : '${abbrs.managementGovernance.resourceGroup}${workloadName}'
@@ -121,6 +127,7 @@ resource cognitiveServicesOpenAIUser 'Microsoft.Authorization/roleDefinitions@20
   name: roles.ai.cognitiveServicesOpenAIUser
 }
 
+var omniCompletionModelDeploymentName = 'gpt-4o'
 var visionCompletionModelDeploymentName = 'gpt-4'
 var completionModelDeploymentName = 'gpt-35-turbo'
 
@@ -150,6 +157,37 @@ module openAI './ai_ml/openai.bicep' = {
           format: 'OpenAI'
           name: 'gpt-35-turbo'
           version: '1106'
+        }
+        sku: {
+          name: 'Standard'
+          capacity: 80
+        }
+      }
+    ]
+    roleAssignments: [
+      {
+        principalId: managedIdentity.outputs.principalId
+        roleDefinitionId: cognitiveServicesOpenAIUser.id
+        principalType: 'ServicePrincipal'
+      }
+    ]
+  }
+}
+
+module openAIPreview './ai_ml/openai.bicep' = {
+  name: '${abbrs.ai.openAIService}${openAIPreviewResourceToken}'
+  scope: resourceGroup
+  params: {
+    name: '${abbrs.ai.openAIService}${openAIPreviewResourceToken}'
+    location: openAIPreviewLocation
+    tags: union(tags, {})
+    deployments: [
+      {
+        name: omniCompletionModelDeploymentName
+        model: {
+          format: 'OpenAI'
+          name: 'gpt-4o'
+          version: '2024-05-13'
         }
         sku: {
           name: 'Standard'
@@ -313,6 +351,14 @@ output openAIInfo object = {
   host: openAI.outputs.host
   visionCompletionModelDeploymentName: visionCompletionModelDeploymentName
   completionModelDeploymentName: completionModelDeploymentName
+}
+
+output openAIPreviewInfo object = {
+  id: openAIPreview.outputs.id
+  name: openAIPreview.outputs.name
+  endpoint: openAIPreview.outputs.endpoint
+  host: openAIPreview.outputs.host
+  omniCompletionModelDeploymentName: omniCompletionModelDeploymentName
 }
 
 output logAnalyticsWorkspaceInfo object = {
