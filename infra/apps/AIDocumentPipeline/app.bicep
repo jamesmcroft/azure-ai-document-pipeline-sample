@@ -1,3 +1,5 @@
+import { environmentVariableInfo } from '../../containers/container-app.bicep'
+
 targetScope = 'resourceGroup'
 
 @minLength(1)
@@ -10,81 +12,205 @@ param workloadName string
 param location string
 
 @description('Tags for all resources.')
-param tags object = {}
+param tags object = {
+  WorkloadName: workloadName
+  Environment: 'Dev'
+  App: 'ai-document-pipeline'
+}
 
 @description('Name of the container image.')
 param containerImageName string
 
-@description('Primary location for the deployed Document Intelligence service. Default is westeurope for latest preview support.')
-param documentIntelligenceLocation string = 'westeurope'
-
-@description('Location of the Azure OpenAI service for the application. Default is swedencentral.')
-param openAILocation string = 'swedencentral'
-@description('Name of the Azure OpenAI completion model for the application. Default is gpt-35-turbo.')
-param openAICompletionModelName string = 'gpt-35-turbo'
-@description('Name of the Azure OpenAI vision completion model for the application. Default is gpt-4.')
-param openAIVisionCompletionModelName string = 'gpt-4'
-@description('Name of the Azure OpenAI embedding model for the application. Default is text-embedding-ada-002.')
-param openAIEmbeddingModelName string = 'text-embedding-ada-002'
+@description('Environment variables for the container.')
+param environmentVariables environmentVariableInfo[] = []
 
 var abbrs = loadJsonContent('../../abbreviations.json')
+var roles = loadJsonContent('../../roles.json')
 var resourceToken = toLower(uniqueString(subscription().id, workloadName, location))
-var documentIntelligenceResourceToken = toLower(uniqueString(
-  subscription().id,
-  workloadName,
-  documentIntelligenceLocation
-))
-var openAIResourceToken = toLower(uniqueString(subscription().id, workloadName, openAILocation))
+var appResourceToken = toLower(uniqueString(resourceToken, 'app-api'))
 
-resource managedIdentityRef 'Microsoft.ManagedIdentity/userAssignedIdentities@2022-01-31-preview' existing = {
-  name: '${abbrs.security.managedIdentity}${resourceToken}'
-}
+var storageAccountName = '${abbrs.storage.storageAccount}${resourceToken}'
+var keyVaultName = '${abbrs.security.keyVault}${resourceToken}'
+var applicationInsightsName = '${abbrs.managementGovernance.applicationInsights}${resourceToken}'
+var containerRegistryName = '${abbrs.containers.containerRegistry}${resourceToken}'
+var aiServicesName = '${abbrs.ai.aiServices}${resourceToken}'
+var containerAppsEnvironmentName = '${abbrs.containers.containerAppsEnvironment}${resourceToken}'
+var appIdentityName = '${abbrs.security.managedIdentity}${appResourceToken}'
+var containerAppName = '${abbrs.containers.containerApp}${appResourceToken}'
+var invoicesQueueName = 'invoices'
 
-resource containerRegistryRef 'Microsoft.ContainerRegistry/registries@2022-12-01' existing = {
-  name: '${abbrs.containers.containerRegistry}${resourceToken}'
+resource containerRegistryRef 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' existing = {
+  name: containerRegistryName
 }
 
 resource applicationInsightsRef 'Microsoft.Insights/components@2020-02-02' existing = {
-  name: '${abbrs.managementGovernance.applicationInsights}${resourceToken}'
+  name: applicationInsightsName
 }
 
-resource storageAccountRef 'Microsoft.Storage/storageAccounts@2022-09-01' existing = {
-  name: '${abbrs.storage.storageAccount}${resourceToken}'
+resource aiServicesRef 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' existing = {
+  name: aiServicesName
 }
 
-resource documentIntelligenceRef 'Microsoft.CognitiveServices/accounts@2023-10-01-preview' existing = {
-  name: '${abbrs.ai.documentIntelligence}${documentIntelligenceResourceToken}'
+resource containerAppsEnvironmentRef 'Microsoft.App/managedEnvironments@2024-03-01' existing = {
+  name: containerAppsEnvironmentName
 }
 
-resource openAIRef 'Microsoft.CognitiveServices/accounts@2023-10-01-preview' existing = {
-  name: '${abbrs.ai.openAIService}${openAIResourceToken}'
+resource storageAccountRef 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
+  name: storageAccountName
 }
 
-resource containerAppsEnvironmentRef 'Microsoft.App/managedEnvironments@2023-05-01' existing = {
-  name: '${abbrs.containers.containerAppsEnvironment}${resourceToken}'
+resource keyVaultRef 'Microsoft.KeyVault/vaults@2024-04-01-preview' existing = {
+  name: keyVaultName
 }
 
-var appToken = toLower(uniqueString(subscription().id, workloadName, location, 'ai-document-pipeline'))
+module appIdentity '../../security/managed-identity.bicep' = {
+  name: appIdentityName
+  params: {
+    name: appIdentityName
+    location: location
+    tags: union(tags, { IdentityFor: containerAppName })
+  }
+}
+
+resource keyVaultSecretsOfficerRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: roles.security.keyVaultSecretsOfficer
+}
+
+resource acrPullRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: roles.containers.acrPull
+}
+
+resource cognitiveServicesUserRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: roles.ai.cognitiveServicesUser
+}
+
+resource cognitiveServicesOpenAIUserRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: roles.ai.cognitiveServicesOpenAIUser
+}
+
+// Required RBAC roles for Azure Functions to access the storage account
+// https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference?tabs=blob&pivots=programming-language-csharp#connecting-to-host-storage-with-an-identity
+resource storageAccountContributorRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: roles.storage.storageAccountContributor
+}
+
+resource storageBlobDataContributorRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: roles.storage.storageBlobDataContributor
+}
+
+resource storageBlobDataOwnerRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: roles.storage.storageBlobDataOwner
+}
+
+resource storageQueueDataContributorRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: roles.storage.storageQueueDataContributor
+}
+
+resource storageTableDataContributorRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  name: roles.storage.storageTableDataContributor
+}
+
+module aiServicesRoleAssignment '../../security/resource-role-assignment.json' = {
+  name: '${aiServicesName}-role-assignment'
+  params: {
+    resourceId: aiServicesRef.id
+    roleAssignments: [
+      {
+        principalId: appIdentity.outputs.principalId
+        roleDefinitionId: cognitiveServicesUserRole.id
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: appIdentity.outputs.principalId
+        roleDefinitionId: cognitiveServicesOpenAIUserRole.id
+        principalType: 'ServicePrincipal'
+      }
+    ]
+  }
+}
+
+module keyVaultRoleAssignment '../../security/resource-role-assignment.json' = {
+  name: '${keyVaultName}-role-assignment'
+  params: {
+    resourceId: keyVaultRef.id
+    roleAssignments: [
+      {
+        principalId: appIdentity.outputs.principalId
+        roleDefinitionId: keyVaultSecretsOfficerRole.id
+        principalType: 'ServicePrincipal'
+      }
+    ]
+  }
+}
+
+module containerRegistryRoleAssignment '../../security/resource-role-assignment.json' = {
+  name: '${containerRegistryName}-role-assignment'
+  params: {
+    resourceId: containerRegistryRef.id
+    roleAssignments: [
+      {
+        principalId: appIdentity.outputs.principalId
+        roleDefinitionId: acrPullRole.id
+        principalType: 'ServicePrincipal'
+      }
+    ]
+  }
+}
+
+module storageAccountRoleAssignment '../../security/resource-role-assignment.json' = {
+  name: '${storageAccountName}-role-assignment'
+  params: {
+    resourceId: storageAccountRef.id
+    roleAssignments: [
+      {
+        principalId: appIdentity.outputs.principalId
+        roleDefinitionId: storageAccountContributorRole.id
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: appIdentity.outputs.principalId
+        roleDefinitionId: storageBlobDataContributorRole.id
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: appIdentity.outputs.principalId
+        roleDefinitionId: storageBlobDataOwnerRole.id
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: appIdentity.outputs.principalId
+        roleDefinitionId: storageQueueDataContributorRole.id
+        principalType: 'ServicePrincipal'
+      }
+      {
+        principalId: appIdentity.outputs.principalId
+        roleDefinitionId: storageTableDataContributorRole.id
+        principalType: 'ServicePrincipal'
+      }
+    ]
+  }
+}
+
 var functionsWebJobStorageVariableName = 'AzureWebJobsStorage'
 var invoicesConnectionStringVariableName = 'INVOICES_QUEUE_CONNECTION'
 var applicationInsightsConnectionStringSecretName = 'applicationinsightsconnectionstring'
 
 module invoicesQueue '../../storage/storage-queue.bicep' = {
-  name: '${abbrs.storage.storageAccount}${appToken}'
+  name: '${abbrs.storage.storageAccount}-${invoicesQueueName}'
   params: {
-    name: 'invoices'
+    name: invoicesQueueName
     storageAccountName: storageAccountRef.name
   }
 }
 
 module containerApp '../../containers/container-app.bicep' = {
-  name: '${abbrs.containers.containerApp}${appToken}'
+  name: containerAppName
   params: {
-    name: '${abbrs.containers.containerApp}${appToken}'
+    name: containerAppName
     location: location
     tags: union(tags, { App: 'ai-document-pipeline' })
     containerAppsEnvironmentId: containerAppsEnvironmentRef.id
-    containerAppIdentityId: managedIdentityRef.id
+    containerAppIdentityId: appIdentity.outputs.id
     imageInContainerRegistry: true
     containerRegistryName: containerRegistryRef.name
     containerImageName: containerImageName
@@ -114,76 +240,59 @@ module containerApp '../../containers/container-app.bicep' = {
         value: applicationInsightsRef.properties.ConnectionString
       }
     ]
-    environmentVariables: [
-      {
-        name: 'FUNCTIONS_EXTENSION_VERSION'
-        value: '~4'
-      }
-      {
-        name: 'FUNCTIONS_WORKER_RUNTIME'
-        value: 'dotnet-isolated'
-      }
-      {
-        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-        secretRef: applicationInsightsConnectionStringSecretName
-      }
-      {
-        name: '${functionsWebJobStorageVariableName}__accountName'
-        value: storageAccountRef.name
-      }
-      {
-        name: '${functionsWebJobStorageVariableName}__credential'
-        value: 'managedidentity'
-      }
-      {
-        name: '${functionsWebJobStorageVariableName}__clientId'
-        value: managedIdentityRef.properties.clientId
-      }
-      {
-        name: 'MANAGED_IDENTITY_CLIENT_ID'
-        value: managedIdentityRef.properties.clientId
-      }
-      {
-        name: 'DOCUMENT_INTELLIGENCE_ENDPOINT'
-        value: documentIntelligenceRef.properties.endpoint
-      }
-      {
-        name: 'OPENAI_ENDPOINT'
-        value: openAIRef.properties.endpoint
-      }
-      {
-        name: 'OPENAI_COMPLETION_MODEL_DEPLOYMENT'
-        value: openAICompletionModelName
-      }
-      {
-        name: 'OPENAI_VISION_COMPLETION_MODEL_DEPLOYMENT'
-        value: openAIVisionCompletionModelName
-      }
-      {
-        name: 'OPENAI_EMBEDDING_MODEL_DEPLOYMENT'
-        value: openAIEmbeddingModelName
-      }
-      {
-        name: 'INVOICES_STORAGE_ACCOUNT_NAME'
-        value: storageAccountRef.name
-      }
-      {
-        name: '${invoicesConnectionStringVariableName}__accountName'
-        value: storageAccountRef.name
-      }
-      {
-        name: '${invoicesConnectionStringVariableName}__credential'
-        value: 'managedidentity'
-      }
-      {
-        name: '${invoicesConnectionStringVariableName}__clientId'
-        value: managedIdentityRef.properties.clientId
-      }
-      {
-        name: 'WEBSITE_HOSTNAME'
-        value: 'localhost'
-      }
-    ]
+    environmentVariables: concat(
+      [
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'dotnet-isolated'
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          secretRef: applicationInsightsConnectionStringSecretName
+        }
+        {
+          name: '${functionsWebJobStorageVariableName}__accountName'
+          value: storageAccountRef.name
+        }
+        {
+          name: '${functionsWebJobStorageVariableName}__credential'
+          value: 'managedidentity'
+        }
+        {
+          name: '${functionsWebJobStorageVariableName}__clientId'
+          value: appIdentity.outputs.clientId
+        }
+        {
+          name: 'MANAGED_IDENTITY_CLIENT_ID'
+          value: appIdentity.outputs.clientId
+        }
+        {
+          name: 'INVOICES_STORAGE_ACCOUNT_NAME'
+          value: storageAccountRef.name
+        }
+        {
+          name: '${invoicesConnectionStringVariableName}__accountName'
+          value: storageAccountRef.name
+        }
+        {
+          name: '${invoicesConnectionStringVariableName}__credential'
+          value: 'managedidentity'
+        }
+        {
+          name: '${invoicesConnectionStringVariableName}__clientId'
+          value: appIdentity.outputs.clientId
+        }
+        {
+          name: 'WEBSITE_HOSTNAME'
+          value: 'localhost'
+        }
+      ],
+      environmentVariables
+    )
   }
 }
 

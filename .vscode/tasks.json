@@ -68,7 +68,7 @@
       }
     },
     {
-      "label": "func: host start",
+      "label": "func: host start dotnet",
       "type": "func",
       "dependsOn": "build (functions)",
       "options": {

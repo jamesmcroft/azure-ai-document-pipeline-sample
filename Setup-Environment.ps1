@@ -10,10 +10,9 @@
 .PARAMETER SkipInfrastructure
     Whether to skip the infrastructure deployment. Requires InfrastructureOutputs.json to exist in the infra directory.
 .EXAMPLE
-    .\Setup-Environment.ps1 -DeploymentName 'my-deployment' -Location 'westeurope' -SkipInfrastructure $false
+    .\Setup-Environment.ps1 -DeploymentName 'my-deployment' -Location 'eastus' -IsLocal $true -SkipInfrastructure $false
 .NOTES
     Author: James Croft
-    Date: 2024-04-20
 #>
 
 param
@@ -42,20 +41,16 @@ else {
     $InfrastructureOutputs = Get-Content -Path './infra/InfrastructureOutputs.json' -Raw | ConvertFrom-Json
 }
 
-$OpenAIEndpoint = $InfrastructureOutputs.openAIInfo.value.endpoint
-$OpenAICompletionDeployment = $InfrastructureOutputs.openAIInfo.value.completionModelDeploymentName
-$OpenAIVisionCompletionDeployment = $InfrastructureOutputs.openAIInfo.value.visionCompletionModelDeploymentName
-$DocumentIntelligenceEndpoint = $InfrastructureOutputs.documentIntelligenceInfo.value.endpoint
-$StorageAccountName = $InfrastructureOutputs.storageAccountInfo.value.name
+$OpenAIEndpoint = $InfrastructureOutputs.outputs.value.openAIEndpoint
+$OpenAIVisionCompletionDeployment = $InfrastructureOutputs.outputs.value.gpt4oDeploymentName
+$StorageAccountName = $InfrastructureOutputs.outputs.value.storageAccountName
 
 Write-Host "Updating local settings..."
 
 $LocalSettingsPath = './src/AIDocumentPipeline/local.settings.json'
 $LocalSettings = Get-Content -Path $LocalSettingsPath -Raw | ConvertFrom-Json
 $LocalSettings.Values.OPENAI_ENDPOINT = $OpenAIEndpoint
-$LocalSettings.Values.OPENAI_COMPLETION_DEPLOYMENT = $OpenAICompletionDeployment
 $LocalSettings.Values.OPENAI_VISION_COMPLETION_DEPLOYMENT = $OpenAIVisionCompletionDeployment
-$LocalSettings.Values.DOCUMENT_INTELLIGENCE_ENDPOINT = $DocumentIntelligenceEndpoint
 $LocalSettings.Values.INVOICES_STORAGE_ACCOUNT_NAME = $StorageAccountName
 $LocalSettings | ConvertTo-Json | Out-File -FilePath $LocalSettingsPath -Encoding utf8
 

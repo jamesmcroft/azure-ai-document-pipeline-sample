@@ -1,7 +1,11 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using AIDocumentPipeline.Shared.Serialization.AzureOpenAI;
 using Azure.AI.OpenAI;
+using JsonSchemaMapper;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenAI.Chat;
 using SkiaSharp;
 
 namespace AIDocumentPipeline.Shared.Documents.OpenAI;
@@ -10,16 +14,14 @@ namespace AIDocumentPipeline.Shared.Documents.OpenAI;
 /// Defines a document data extractor that uses Azure OpenAI to extract structured data using multi-modal vision capabilities.
 /// </summary>
 public class OpenAIVisionDocumentDataExtractor(
-    OpenAIClient client,
+    AzureOpenAIClient client,
     IOptions<OpenAIDocumentDataExtractionOptions> options,
     ILogger<OpenAIVisionDocumentDataExtractor> logger)
     : IDocumentDataExtractor
 {
-    /// <inheritdoc />
     public async Task<T?> FromByteArrayAsync<T>(
         byte[] documentBytes,
-        T schemaObject,
-        Func<T, string> extractionPromptConstruct,
+        string extractionPrompt,
         CancellationToken cancellationToken = default) where T : class
     {
         var pageImages = ToProcessedImages(documentBytes);
@@ -31,26 +33,22 @@ public class OpenAIVisionDocumentDataExtractor(
                 var chatOptions = options.Value;
 
                 AddSystemPrompt(options.Value.SystemPrompt, chatOptions.Messages);
+                AddStructuredOutputSchema<T>(chatOptions);
+                AddVisionPrompt(extractionPrompt, pageImages, chatOptions.Messages);
 
-                AddVisionPrompt(extractionPromptConstruct(schemaObject), pageImages, chatOptions.Messages);
+                var chatClient = client.GetChatClient(chatOptions.DeploymentName);
 
-                var response = await client.GetChatCompletionsAsync(chatOptions, cancellationToken);
+                var response = await chatClient.CompleteChatAsync<T?>(chatOptions.Messages, chatOptions, cancellationToken: cancellationToken);
 
-                var completion = response.Value.Choices[0];
-                if (completion == null)
+                var parsedResult = response.Parsed;
+                if (parsedResult != null)
                 {
-                    logger.LogWarning("No data was returned from the Azure OpenAI service.");
-                    return null;
-                }
-
-                var extractedData = completion.Message.Content;
-                if (!string.IsNullOrEmpty(extractedData))
-                {
-                    return JsonSerializer.Deserialize<T>(extractedData);
+                    return parsedResult;
                 }
 
                 logger.LogWarning("No data was extracted from the document.");
                 return null;
+
             }
             catch (Exception ex)
             {
@@ -63,14 +61,19 @@ public class OpenAIVisionDocumentDataExtractor(
         return default;
     }
 
+    private void AddStructuredOutputSchema<T>(OpenAIDocumentDataExtractionOptions chatOptions) where T : class
+    {
+        chatOptions.ResponseFormat =
+            typeof(T).CreateJsonSchemaFormat("document", "Output from document data extraction.", true);
+    }
+
     private IEnumerable<byte[]> ToProcessedImages(byte[] documentBytes)
     {
         var pageImages = PDFtoImage.Conversion.ToImages(documentBytes);
 
         var totalPageCount = pageImages.Count();
 
-        // If there are more than 10 pages, we need to stitch images together so that the total number of pages is less than or equal to 10 for the OpenAI API.
-        var maxSize = (int)Math.Ceiling(totalPageCount / 10.0);
+        var maxSize = (int)Math.Ceiling(totalPageCount / 50.0);
 
         var pageImageGroups = new List<List<SKBitmap>>();
 
@@ -82,7 +85,6 @@ public class OpenAIVisionDocumentDataExtractor(
 
         var pdfImageFiles = new List<byte[]>();
 
-        // Stitch images together if they have been grouped. This should result in a total of 10 or fewer images in the list.
         foreach (var pageImageGroup in pageImageGroups)
         {
             var totalHeight = pageImageGroup.Sum(image => image.Height);
@@ -97,8 +99,6 @@ public class OpenAIVisionDocumentDataExtractor(
                 currentHeight += pageImage.Height;
             }
 
-            //stitchedImage = stitchedImage.Resize(new SKImageInfo(width * 2, totalHeight * 2), SKFilterQuality.High);
-
             var stitchedImageStream = new MemoryStream();
             stitchedImage.Encode(stitchedImageStream, SKEncodedImageFormat.Jpeg, 100);
             pdfImageFiles.Add(stitchedImageStream.ToArray());
@@ -107,24 +107,28 @@ public class OpenAIVisionDocumentDataExtractor(
         return pdfImageFiles;
     }
 
-    private static void AddSystemPrompt(string systemPrompt, ICollection<ChatRequestMessage> messages)
+    private static void AddSystemPrompt(string systemPrompt, ICollection<ChatMessage> messages)
     {
         if (!string.IsNullOrEmpty(systemPrompt))
         {
-            messages.Add(new ChatRequestSystemMessage(systemPrompt));
+            messages.Add(new SystemChatMessage(systemPrompt));
         }
     }
 
-    private static void AddVisionPrompt(string userPrompt, IEnumerable<byte[]> pageImages,
-        ICollection<ChatRequestMessage> messages)
+    private static void AddVisionPrompt(
+        string userPrompt,
+        IEnumerable<byte[]> pageImages,
+        ICollection<ChatMessage> messages)
     {
-        if (!string.IsNullOrEmpty(userPrompt))
+        if (string.IsNullOrEmpty(userPrompt))
         {
-            var userPromptParts = new List<ChatMessageContentItem> { new ChatMessageTextContentItem(userPrompt) };
-            userPromptParts.AddRange(pageImages.Select(image =>
-                new ChatMessageImageContentItem(BinaryData.FromBytes(image), "image/jpeg")));
-
-            messages.Add(new ChatRequestUserMessage(userPromptParts.ToArray()));
+            return;
         }
+
+        var userPromptParts = new List<ChatMessageContentPart> { ChatMessageContentPart.CreateTextPart(userPrompt) };
+        userPromptParts.AddRange(pageImages.Select(image =>
+            ChatMessageContentPart.CreateImagePart(BinaryData.FromBytes(image), "image/jpeg")));
+
+        messages.Add(new UserChatMessage(userPromptParts.ToArray()));
     }
 }

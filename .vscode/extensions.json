@@ -1,7 +1,7 @@
 {
   "recommendations": [
-    "ms-vscode.vscode-node-azure-pack",
     "ms-azuretools.vscode-azurefunctions",
+    "ms-vscode.vscode-node-azure-pack",
     "ms-dotnettools.csharp",
     "ms-azuretools.vscode-bicep",
     "DurableFunctionsMonitor.durablefunctionsmonitor",

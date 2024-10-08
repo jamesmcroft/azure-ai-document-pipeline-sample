@@ -9,7 +9,7 @@
 .PARAMETER Location
     The location to deploy the Azure resources to.
 .EXAMPLE
-    .\Deploy-Infrastructure.ps1 -DeploymentName "my-workflows" -Location "westeurope"
+    .\Deploy-Infrastructure.ps1 -DeploymentName "my-workflows" -Location "eastus"
 .NOTES
     Author: James Croft
 #>

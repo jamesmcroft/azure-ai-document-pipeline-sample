@@ -22,13 +22,21 @@ param
     [string]$InfrastructureOutputsPath
 )
 
+function Get-JsonBicepParameterObject($hashTable) {
+    $hashTableJson = $hashTable | ConvertTo-Json -Compress
+    $hashTableJson = $hashTableJson -replace '"', '\"'
+    $hashTableJson = "`"$hashTableJson`""
+    return $hashTableJson
+}
+
 $InfrastructureOutputs = Get-Content -Path $InfrastructureOutputsPath -Raw | ConvertFrom-Json
 
-$Location = $InfrastructureOutputs.resourceGroupInfo.value.location
-$ResourceGroupName = $InfrastructureOutputs.resourceGroupInfo.value.name
-$WorkloadName = $InfrastructureOutputs.resourceGroupInfo.value.workloadName
-$ContainerRegistryName = $InfrastructureOutputs.containerRegistryInfo.value.name
-$CompletionModelDeploymentName = $InfrastructureOutputs.openAIInfo.value.completionModelDeploymentName
+$Location = $InfrastructureOutputs.outputs.value.location
+$ResourceGroupName = $InfrastructureOutputs.outputs.value.resourceGroupName
+$WorkloadName = $InfrastructureOutputs.outputs.value.workloadName
+$ContainerRegistryName = $InfrastructureOutputs.outputs.value.containerRegistryName
+$Gpt4oModelEndpoint = $InfrastructureOutputs.outputs.value.openAIEndpoint
+$Gpt4oModelDeploymentName = $InfrastructureOutputs.outputs.value.gpt4oDeploymentName
 
 $ContainerName = "ai-document-pipeline"
 $ContainerVersion = (Get-Date -Format "yyMMddHHmm")
@@ -54,12 +62,18 @@ docker push $AzureContainerImageName
 
 Write-Host "Deploying Azure Container Apps for ${ContainerName}..."
 
-$DeploymentOutputs = (az deployment group create --name ai-document-pipeline-app --resource-group $ResourceGroupName --template-file './app.bicep' `
+$EnvironmentVariables = @(
+    @{ name = "OPENAI_ENDPOINT"; value = $Gpt4oModelEndpoint }
+    @{ name = "OPENAI_VISION_COMPLETION_DEPLOYMENT"; value = $Gpt4oModelDeploymentName }
+    @{ name = "OPENAI_API_VERSION"; value = "2024-08-01-preview" }
+)
+
+$DeploymentOutputs = (az deployment group create --name $ContainerName --resource-group $ResourceGroupName --template-file './app.bicep' `
         --parameters '../../main.parameters.json' `
         --parameters workloadName=$WorkloadName `
         --parameters location=$Location `
         --parameters containerImageName=$ContainerImageName `
-        --parameters openAICompletionModelName=$CompletionModelDeploymentName `
+        --parameters environmentVariables=$(Get-JsonBicepParameterObject $EnvironmentVariables) `
         --query properties.outputs -o json) | ConvertFrom-Json
 
 $DeploymentOutputs | ConvertTo-Json | Out-File -FilePath './AppOutputs.json' -Encoding utf8

@@ -24,7 +24,7 @@ type ingressConfigInfo = {
 @description('Information about the resource configuration for the container app.')
 type resourceConfigInfo = {
   @description('CPU limit for the container.')
-  cpu: string
+  cpu: int?
   @description('Memory limit for the container.')
   memory: string
 }
@@ -84,14 +84,14 @@ param containerIngress ingressConfigInfo = {
   allowInsecure: false
   ipSecurityRestrictions: []
 }
-@description('Resource configuration for the container. Defaults to 0.5 CPU and 1.0Gi memory.')
+@description('Resource configuration for the container. Defaults to 1 CPU and 2.0Gi memory.')
 param containerResources resourceConfigInfo = {
-  cpu: '0.5'
-  memory: '1.0Gi'
+  cpu: 1
+  memory: '2.0Gi'
 }
-@description('Scale configuration for the container. Defaults to min 1 replica, max 3 replicas, with HTTP rule for 20 concurrent requests.')
+@description('Scale configuration for the container. Defaults to min 0 replica, max 3 replicas, with HTTP rule for 20 concurrent requests.')
 param containerScale scaleConfigInfo = {
-  minReplicas: 1
+  minReplicas: 0
   maxReplicas: 3
   rules: [
     {
@@ -117,7 +117,7 @@ param daprEnabled bool = false
 @description('Name for the Dapr App ID. Required if Dapr is enabled. Defaults to empty.')
 param daprAppId string = ''
 
-resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
+resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
   location: location
   tags: tags

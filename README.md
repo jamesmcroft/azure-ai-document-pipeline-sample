@@ -1,11 +1,10 @@
 # Azure AI Document Data Extraction Pipeline using Durable Functions
 
-This sample project demonstrates how to build a scalable, document data extraction pipeline by combining the capabilities of Durable Functions with various techniques for extraction using Azure AI services. The sample specifically processes structured invoices in PDF format. The sample can be adapted to process any structured or unstructured document format.
+This sample project demonstrates how to build a scalable, document data extraction pipeline by combining the capabilities of Durable Functions with techniques for extraction using Azure AI services. The sample specifically processes structured invoices in PDF format using Azure OpenAI GPT-4o vision capabilities and [Structured Outputs](https://techcommunity.microsoft.com/t5/azure-for-isv-and-startups/using-structured-outputs-in-azure-openai-s-gpt-4o-for-consistent/ba-p/4261737). The sample can be adapted to process any structured or unstructured document format.
 
-This approach takes advantage of the following techniques for document data extraction:
+This approach takes advantage of the following technique for document data extraction:
 
-- [Using Azure AI Document Intelligence to extract Markdown content from files and perform data extraction using Azure OpenAI GPT models](https://techcommunity.microsoft.com/t5/azure-for-isv-and-startups/using-azure-ai-document-intelligence-and-azure-openai-to-extract/ba-p/4107746)
-- [Using Azure OpenAI GPT-4 Omni vision capabilities to extract data from PDF files by converting them to images](https://github.com/Azure-Samples/azure-openai-gpt-4-vision-pdf-extraction-sample)
+- [Data Extraction - Azure OpenAI GPT-4o with Vision](https://github.com/Azure-Samples/azure-ai-document-processing-samples/blob/main/samples/extraction/vision-based/openai.ipynb)
 
 ## Pre-requisites - Understanding
 
@@ -19,8 +18,7 @@ Before continuing with this sample, please ensure that you have a level of under
 
 ### Azure Services
 
-- [Azure AI Document Intelligence](https://learn.microsoft.com/en-gb/azure/ai-services/document-intelligence/concept-layout?view=doc-intel-4.0.0&tabs=sample-code)
-- [Azure OpenAI Service](https://learn.microsoft.com/en-us/azure/ai-services/openai/overview)
+- [Azure AI Services - OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/overview)
 - [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction)
 - [Azure Storage Queues](https://learn.microsoft.com/en-us/azure/storage/queues/storage-queues-introduction)
 - [Azure Container Apps](https://learn.microsoft.com/en-us/azure/azure-functions/functions-deploy-container-apps?tabs=acr%2Cbash&pivots=programming-language-csharp)
@@ -29,7 +27,7 @@ Before continuing with this sample, please ensure that you have a level of under
 
 Before running the sample, you will need to have the following:
 
-- An Azure subscription. If you don't have an Azure subscription, create a [free account](https://azure.microsoft.com/en-us/free/).
+- An Azure subscription. If you don't have an Azure subscription, create an [account](https://azure.microsoft.com/en-us/).
 - [PowerShell Core](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.1).
 - [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli).
 - [.NET 8 SDK](https://dotnet.microsoft.com/download).
@@ -54,9 +52,8 @@ Below is an illustration of how the pipeline may integrate into an intelligent a
 
 - [**Azure Container Apps**](https://learn.microsoft.com/en-us/azure/azure-functions/functions-deploy-container-apps?tabs=acr%2Cbash&pivots=programming-language-csharp), used to host the containerized functions used in the document processing pipeline.
   - **Note**: By containerizing the functions app, you can integrate this specific orchestration pipeline into an existing microservices architecture or deploy it as a standalone service.
-- [**Azure OpenAI Service**](https://learn.microsoft.com/en-us/azure/ai-services/openai/overview), a managed service for OpenAI GPT models, deploying the latest GPT-4 Omni model to support both Markdown and Vision extraction techniques.
-  - **Note**: The GPT-4 Omni model is not available in all Azure OpenAI regions. For more information, see the [Azure OpenAI Service documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models#standard-deployment-model-availability).
-- [**Azure AI Document Intelligence Service**](https://learn.microsoft.com/en-gb/azure/ai-services/document-intelligence/concept-layout?view=doc-intel-4.0.0&tabs=sample-code), used to extract the content of the documents using the pre-built layout model in Markdown format.
+- [**Azure AI Services - OpenAI**](https://learn.microsoft.com/en-us/azure/ai-services/openai/overview), a managed service for OpenAI GPT models, deploying the latest GPT-4o model for Vision extraction techniques.
+  - **Note**: The GPT-4o model is not available in all Azure OpenAI regions. For more information, see the [Azure OpenAI Service documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models#standard-deployment-model-availability).
 - [**Azure Storage Account**](https://learn.microsoft.com/en-us/azure/storage/common/storage-introduction), used to store the batch of documents to be processed and the extracted data from the documents. The storage account is also used to store the queue messages for the document processing pipeline.
 - [**Azure Monitor**](https://learn.microsoft.com/en-us/azure/azure-monitor/overview), used to store logs and traces from the document processing pipeline for monitoring and troubleshooting purposes.
 - [**Azure Container Registry**](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-intro), used to store the container images for the document processing pipeline service that will be consumed by Azure Container Apps.
@@ -73,9 +70,7 @@ The project is structured as follows:
     - Activities are the individual discrete actions that are executed by the orchestration to process the documents. State is maintained across activities by the Durable Functions runtime.
   - **[Shared](./src/AIDocumentPipeline/Shared)**: Contains specific shared components that are exclusive to the Durable Functions project, including [observability configuration](./src/AIDocumentPipeline/Shared/Observability/ObservabilityExtensions.cs) and base implementations for workflows and activities.
 - **[AIDocumentPipeline.Shared](./src/AIDocumentPipeline.Shared)**: Contains reusable .NET services that can be used across multiple projects, including the document data extractor services for Azure OpenAI and Azure AI Document Intelligence.
-  - **[Documents](./src/AIDocumentPipeline.Shared/Documents)**: Contains the document data extractor services for Azure OpenAI and Azure AI Document Intelligence.
-    - **[DocumentIntelligence](./src/AIDocumentPipeline.Shared/Documents/DocumentIntelligence)**: Contains the service for extracting the content of the documents in Markdown using Azure AI Document Intelligence.
-    - **[OpenAI](./src/AIDocumentPipeline.Shared/Documents/OpenAI)**: Contains the services for extracting the structure data from documents using Azure OpenAI. This includes both the Markdown and Vision extraction techniques.
+  - **[Documents/OpenAI](./src/AIDocumentPipeline.Shared/Documents/OpenAI)**: Contains the services for extracting the structure data from documents using Azure OpenAI. This includes an implementation using Vision extraction techniques and [Structured Outputs](https://techcommunity.microsoft.com/t5/azure-for-isv-and-startups/using-structured-outputs-in-azure-openai-s-gpt-4o-for-consistent/ba-p/4261737).
 
 ### Flow
 
@@ -89,9 +84,9 @@ The sample pipeline is implemented using Durable Functions and consists of the f
 - The initial workflow then triggers the specific invoice data extraction workflow for each document folder in the batch in parallel using the **[Extract Invoice Data workflow](./src/AIDocumentPipeline/Invoices/ExtractInvoiceDataWorkflow.cs)**. These process the folders as follows:
   - For each folder in the batch:
     - For each file in the folder:
-      - Extract the content of the file using one of the registered document data extractor services, [Azure OpenAI with Markdown](./src/AIDocumentPipeline.Shared/Documents/OpenAI/OpenAIMarkdownDocumentDataExtractor.cs) or [Azure OpenAI with Vision](./src/AIDocumentPipeline.Shared/Documents/OpenAI/OpenAIVisionDocumentDataExtractor.cs). _The registration for these can be found in the [Program class](./src/AIDocumentPipeline/Program.cs) for the Azure Functions project_.
+      - Extract the content of the file using the registered document data extractor services, [Azure OpenAI with Vision](./src/AIDocumentPipeline.Shared/Documents/OpenAI/OpenAIVisionDocumentDataExtractor.cs). _The registration for these can be found in the [Program class](./src/AIDocumentPipeline/Program.cs) for the Azure Functions project_.
       - Extract the structured data expected for the invoice using the defined [Invoice Data object](./src/AIDocumentPipeline/Invoices/InvoiceData.cs). **See [Extract Invoice Data](./src/AIDocumentPipeline/Invoices/Activities/ExtractInvoiceData.cs).**
-        - _By using a defined data-transfer object, the prompt to the language model can be strictly controlled by providing a schema of the expected data to ensure accurate extraction_.
+        - _By using a defined data-transfer object, the prompt to the language model can be strictly controlled by providing a JSON schema as the response\_format of the request to ensure accurate extraction_.
       - Validate the extracted data based on defined business rules. **See [Validate Invoice Data](./src/AIDocumentPipeline/Invoices/Activities/ValidateInvoiceData.cs).**
 
 ### Observability
@@ -136,9 +131,8 @@ When configured for local development, you will need to grant the following role
   - **Role**: Storage Blob Data Contributor
   - **Role**: Storage Queue Data Contributor
 - **Azure OpenAI Service**:
-  - **Role**: Cognitive Services OpenAI User
-- **Azure AI Document Intelligence Service**:
   - **Role**: Cognitive Services User
+  - **Role**: Cognitive Services OpenAI User
 
 With the local development environment setup, you can open the solution in Visual Studio or Visual Studio Code and run the project locally.
 
