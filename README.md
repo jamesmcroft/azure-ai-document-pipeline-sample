@@ -1,5 +1,8 @@
 # Azure AI Document Data Extraction Pipeline using Durable Functions
 
+> [!IMPORTANT]
+> This sample has moved to [Azure/ai-document-processing-pipeline](https://github.com/Azure/ai-document-processing-pipeline). Archived for reference.
+
 This sample project demonstrates how to build a scalable, document data extraction pipeline by combining the capabilities of Durable Functions with techniques for extraction using Azure AI services. The sample specifically processes structured invoices in PDF format using Azure OpenAI GPT-4o vision capabilities and [Structured Outputs](https://techcommunity.microsoft.com/t5/azure-for-isv-and-startups/using-structured-outputs-in-azure-openai-s-gpt-4o-for-consistent/ba-p/4261737). The sample can be adapted to process any structured or unstructured document format.
 
 This approach takes advantage of the following technique for document data extraction:
